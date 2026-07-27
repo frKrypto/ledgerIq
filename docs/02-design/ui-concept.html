@@ -1,0 +1,699 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LedgerIQ — UI Concept</title>
+<style>
+/* ============================================================================
+   LedgerIQ high-fidelity UI concept.
+   Tokens are the validated set from docs/02-design/design-system.md §2.
+   Every categorical + status colour here passed the palette validator
+   (OKLab dE, Machado CVD sim, WCAG contrast) in BOTH light and dark modes.
+   ========================================================================= */
+:root {
+  color-scheme: light;
+  --surface-page:  #f6f6f4;
+  --surface-1:     #fbfbfa;
+  --surface-2:     #f0f0ed;
+  --border-subtle: #e3e3df;
+  --border-strong: #c9c9c3;
+  --text-primary:  #111417;
+  --text-secondary:#4e5459;
+  --text-muted:    #767c82;
+
+  --brand:         #0f8a6a;
+  --brand-hover:   #0b6b53;
+  --brand-subtle:  #e7f5ef;
+
+  --s1: #0f8a6a;  /* teal   — cash    */
+  --s2: #2a78d6;  /* blue   — revenue */
+  --s3: #eb6834;  /* orange — expense */
+  --s4: #4a3aa7;  /* violet — payroll */
+
+  --positive: #0e7c5a;
+  --caution:  #9a6100;
+  --serious:  #b4480f;
+  --critical: #c2312f;
+  --critical-subtle: #fdeceb;
+
+  --font-ui: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-reading: "Source Serif 4", "Iowan Old Style", Georgia, serif;
+  --r-card: 10px; --r-ctl: 6px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+    --surface-page:  #0b0e11;
+    --surface-1:     #111417;
+    --surface-2:     #181c20;
+    --border-subtle: #232830;
+    --border-strong: #333a44;
+    --text-primary:  #f4f5f3;
+    --text-secondary:#a8b0b8;
+    --text-muted:    #6f777f;
+    --brand:         #14a37d;
+    --brand-hover:   #34b489;
+    --brand-subtle:  #0d2a22;
+    --s1: #14a37d; --s2: #3987e5; --s3: #d95926; --s4: #9085e9;
+    --positive: #3fbf94; --caution: #e0a63c; --serious: #f08a4b; --critical: #f2706e;
+    --critical-subtle: #2a1416;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --surface-page:  #0b0e11; --surface-1: #111417; --surface-2: #181c20;
+  --border-subtle: #232830; --border-strong: #333a44;
+  --text-primary:  #f4f5f3; --text-secondary:#a8b0b8; --text-muted: #6f777f;
+  --brand: #14a37d; --brand-hover: #34b489; --brand-subtle: #0d2a22;
+  --s1: #14a37d; --s2: #3987e5; --s3: #d95926; --s4: #9085e9;
+  --positive: #3fbf94; --caution: #e0a63c; --serious: #f08a4b; --critical: #f2706e;
+  --critical-subtle: #2a1416;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--font-ui);
+  background: var(--surface-page);
+  color: var(--text-primary);
+  font-size: 15px; line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "cv05" 1;
+}
+.num { font-variant-numeric: tabular-nums; }
+
+/* ---------- shell ---------- */
+.shell {
+  display: grid; grid-template-columns: 220px 1fr; min-height: 100vh;
+  /* paints the nav column full-height behind the sticky nav */
+  background: linear-gradient(to right, var(--surface-1) 0 220px, var(--surface-page) 220px);
+}
+.nav {
+  background: var(--surface-1); border-right: 1px solid var(--border-subtle);
+  padding: 20px 12px; display: flex; flex-direction: column; gap: 2px;
+  position: sticky; top: 0; height: 100vh; overflow-y: auto;
+}
+.logo { display: flex; align-items: center; gap: 9px; padding: 4px 10px 22px; font-weight: 600; font-size: 17px; letter-spacing: -.02em; }
+.logo .mark { width: 22px; height: 22px; flex: none; }
+.logo .iq { color: var(--brand); }
+.nav a {
+  display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: var(--r-ctl);
+  color: var(--text-secondary); text-decoration: none; font-size: 14px; font-weight: 500;
+}
+.nav a:hover { background: var(--surface-2); color: var(--text-primary); }
+.nav a.on { background: var(--brand-subtle); color: var(--brand); }
+.nav a svg { width: 15px; height: 15px; flex: none; }
+.nav .sep { height: 1px; background: var(--border-subtle); margin: 14px 10px; }
+.nav .grp { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--text-muted); padding: 6px 10px 4px; font-weight: 600; }
+
+.main { min-width: 0; }
+.topbar {
+  height: 56px; border-bottom: 1px solid var(--border-subtle); background: var(--surface-1);
+  display: flex; align-items: center; gap: 16px; padding: 0 24px;
+  position: sticky; top: 0; z-index: 10;
+}
+.org { font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 6px; }
+.spacer { flex: 1; }
+.fresh {
+  display: flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--text-secondary);
+  background: var(--surface-2); padding: 5px 11px; border-radius: 100px; border: 1px solid var(--border-subtle);
+}
+.fresh .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--positive); flex: none; }
+.iconbtn {
+  width: 32px; height: 32px; border-radius: var(--r-ctl); border: 1px solid var(--border-subtle);
+  background: var(--surface-1); color: var(--text-secondary); cursor: pointer;
+  display: grid; place-items: center; font-size: 14px;
+}
+.iconbtn:hover { background: var(--surface-2); color: var(--text-primary); }
+
+.page { padding: 28px 24px 64px; max-width: 1240px; }
+.greet { font-size: 26px; font-weight: 600; letter-spacing: -.02em; margin-bottom: 20px; }
+
+/* ---------- answer bar ---------- */
+.answerbar {
+  background: var(--surface-1); border: 1px solid var(--border-subtle);
+  border-left: 3px solid var(--brand); border-radius: var(--r-card);
+  padding: 22px 24px; margin-bottom: 24px;
+}
+.answerbar p { font-family: var(--font-reading); font-size: 17.5px; line-height: 1.55; margin-bottom: 8px; }
+.answerbar p.lead { font-weight: 600; }
+.answerbar .acts { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+
+.btn {
+  font: inherit; font-size: 13.5px; font-weight: 500; padding: 7px 14px; border-radius: var(--r-ctl);
+  border: 1px solid var(--border-strong); background: var(--surface-1); color: var(--text-primary); cursor: pointer;
+}
+.btn:hover { background: var(--surface-2); }
+.btn.primary { background: var(--brand); border-color: var(--brand); color: #fff; }
+.btn.primary:hover { background: var(--brand-hover); border-color: var(--brand-hover); }
+
+/* ---------- stat tiles ---------- */
+.tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+.tile {
+  background: var(--surface-1); border: 1px solid var(--border-subtle); border-radius: var(--r-card);
+  padding: 16px 18px; cursor: pointer;
+}
+.tile:hover { border-color: var(--border-strong); }
+.tile .lbl { font-size: 12.5px; color: var(--text-secondary); font-weight: 500; display: flex; align-items: center; gap: 5px; }
+.tile .val { font-size: 27px; font-weight: 600; letter-spacing: -.025em; margin: 5px 0 3px; }
+.tile .chg { font-size: 12.5px; font-weight: 500; display: flex; align-items: center; gap: 4px; }
+.up   { color: var(--positive); }
+.down { color: var(--critical); }
+.tile .meta { font-size: 11.5px; color: var(--text-muted); margin-top: 9px; padding-top: 9px; border-top: 1px solid var(--border-subtle); }
+
+/* ---------- cards ---------- */
+.card { background: var(--surface-1); border: 1px solid var(--border-subtle); border-radius: var(--r-card); margin-bottom: 20px; }
+.card-h { display: flex; align-items: center; gap: 12px; padding: 15px 20px; border-bottom: 1px solid var(--border-subtle); }
+.card-h h2 { font-size: 15.5px; font-weight: 600; letter-spacing: -.01em; }
+.card-b { padding: 20px; }
+.seg { display: flex; border: 1px solid var(--border-subtle); border-radius: var(--r-ctl); overflow: hidden; }
+.seg button { font: inherit; font-size: 12.5px; padding: 5px 11px; border: 0; background: var(--surface-1); color: var(--text-secondary); cursor: pointer; }
+.seg button.on { background: var(--surface-2); color: var(--text-primary); font-weight: 500; }
+
+/* ---------- chart ---------- */
+.chartwrap { position: relative; }
+svg.chart { display: block; width: 100%; height: auto; overflow: visible; }
+.legend { display: flex; gap: 18px; flex-wrap: wrap; padding: 14px 20px 0; font-size: 12.5px; color: var(--text-secondary); }
+.legend span { display: inline-flex; align-items: center; gap: 7px; }
+.swatch { width: 14px; height: 3px; border-radius: 2px; flex: none; }
+.swatch.band { height: 10px; opacity: .18; background: var(--s1); border-radius: 2px; }
+.swatch.dash { background: repeating-linear-gradient(90deg, var(--s1) 0 4px, transparent 4px 7px); }
+
+/* ---------- risk rows ---------- */
+.risk { display: flex; align-items: center; gap: 14px; padding: 13px 20px; border-top: 1px solid var(--border-subtle); font-size: 14px; }
+.risk .glyph { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; flex: none; font-weight: 700; }
+.risk .glyph.crit { background: var(--critical-subtle); color: var(--critical); }
+.risk .glyph.warn { background: var(--surface-2); color: var(--caution); }
+.risk .body { flex: 1; min-width: 0; }
+.risk .body b { font-weight: 600; }
+.risk .body span { color: var(--text-secondary); }
+.pill { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; padding: 3px 8px; border-radius: 100px; }
+.pill.crit { background: var(--critical-subtle); color: var(--critical); }
+.pill.warn { background: var(--surface-2); color: var(--caution); }
+
+/* ---------- alert ---------- */
+.alert { background: var(--surface-1); border: 1px solid var(--border-subtle); border-left: 3px solid var(--critical); border-radius: var(--r-card); padding: 20px 22px; margin-bottom: 20px; }
+.alert .hd { display: flex; align-items: center; gap: 9px; font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--critical); margin-bottom: 10px; }
+.alert h3 { font-family: var(--font-reading); font-size: 19px; font-weight: 600; letter-spacing: -.01em; margin-bottom: 9px; }
+.alert .why { font-family: var(--font-reading); font-size: 15.5px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 18px; max-width: 68ch; }
+.opts { border: 1px solid var(--border-subtle); border-radius: var(--r-ctl); overflow: hidden; }
+.opt { display: flex; align-items: center; gap: 14px; padding: 11px 15px; font-size: 14px; }
+.opt + .opt { border-top: 1px solid var(--border-subtle); }
+.opt .t { flex: 1; }
+.opt .amt { font-weight: 600; color: var(--positive); }
+.alert .foot { display: flex; align-items: center; gap: 10px; margin-top: 16px; }
+.linkish { background: none; border: 0; font: inherit; font-size: 13px; color: var(--text-muted); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+
+/* ---------- answer block ---------- */
+.ask { background: var(--surface-1); border: 1px solid var(--border-subtle); border-radius: var(--r-card); padding: 22px; }
+.q { display: flex; gap: 12px; align-items: flex-start; padding-bottom: 18px; margin-bottom: 18px; border-bottom: 1px solid var(--border-subtle); }
+.q .av { width: 26px; height: 26px; border-radius: 50%; background: var(--surface-2); display: grid; place-items: center; font-size: 11px; font-weight: 700; color: var(--text-secondary); flex: none; }
+.q p { font-size: 16px; font-weight: 500; }
+.stages { display: flex; gap: 16px; font-size: 12.5px; color: var(--text-muted); margin-bottom: 16px; flex-wrap: wrap; }
+.stages b { color: var(--positive); font-weight: 600; }
+.headline { font-family: var(--font-reading); font-size: 22px; font-weight: 600; letter-spacing: -.015em; margin-bottom: 16px; }
+.figs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+.fig {
+  display: inline-flex; flex-direction: column; gap: 1px; padding: 8px 13px;
+  background: var(--surface-2); border: 1px solid var(--border-subtle); border-radius: var(--r-ctl); cursor: pointer;
+}
+.fig:hover { border-color: var(--brand); }
+.fig .fv { font-size: 16px; font-weight: 600; letter-spacing: -.01em; }
+.fig .fl { font-size: 11.5px; color: var(--text-secondary); }
+.why2 { font-family: var(--font-reading); font-size: 16px; line-height: 1.65; color: var(--text-secondary); max-width: 70ch; margin-bottom: 18px; }
+details { border-top: 1px solid var(--border-subtle); padding: 12px 0 0; margin-bottom: 4px; }
+summary { cursor: pointer; font-size: 13.5px; font-weight: 500; color: var(--text-secondary); display: flex; align-items: center; gap: 8px; list-style: none; }
+summary::-webkit-details-marker { display: none; }
+summary::before { content: "▸"; font-size: 10px; transition: transform .12s; }
+details[open] summary::before { transform: rotate(90deg); }
+summary .hint { margin-left: auto; font-size: 12px; color: var(--text-muted); font-weight: 400; }
+.assump { display: grid; gap: 8px; padding: 14px 0 4px; }
+.arow { display: flex; align-items: center; gap: 12px; font-size: 13.5px; }
+.arow .an { flex: 1; color: var(--text-secondary); }
+.arow input {
+  font: inherit; font-size: 13px; font-variant-numeric: tabular-nums; width: 108px; text-align: right;
+  padding: 5px 9px; border: 1px solid var(--border-subtle); border-radius: var(--r-ctl);
+  background: var(--surface-page); color: var(--text-primary);
+}
+.arow input:focus { outline: 2px solid var(--brand); outline-offset: 1px; border-color: transparent; }
+.conf { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; color: var(--text-secondary); padding: 12px 0; border-top: 1px solid var(--border-subtle); }
+.conf .badge { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; padding: 2px 8px; border-radius: 100px; background: var(--surface-2); color: var(--caution); flex: none; }
+.followups { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+.chip { font-size: 13px; padding: 6px 12px; border-radius: 100px; border: 1px solid var(--border-subtle); background: var(--surface-1); color: var(--text-secondary); cursor: pointer; }
+.chip:hover { border-color: var(--brand); color: var(--brand); }
+
+.note {
+  font-size: 12.5px; color: var(--text-muted); background: var(--surface-2);
+  border: 1px dashed var(--border-strong); border-radius: var(--r-ctl); padding: 11px 14px; margin-bottom: 22px;
+}
+h1.sect { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--text-muted); font-weight: 600; margin: 34px 0 12px; }
+
+table.tbl { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+table.tbl th { text-align: left; font-weight: 600; font-size: 11.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--text-muted); padding: 8px 12px; border-bottom: 1px solid var(--border-subtle); }
+table.tbl td { padding: 9px 12px; border-bottom: 1px solid var(--border-subtle); }
+table.tbl td.n { text-align: right; font-variant-numeric: tabular-nums; }
+.hidden { display: none; }
+
+@media (max-width: 1000px) {
+  .shell { grid-template-columns: 1fr; }
+  .nav { display: none; }
+  .tiles { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 560px) {
+  .tiles { grid-template-columns: 1fr; }
+  .page { padding: 20px 14px 48px; }
+}
+</style>
+</head>
+<body>
+<div class="shell">
+  <nav class="nav">
+    <div class="logo">
+      <svg class="mark" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M3 17h7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+        <path d="M10 17c4 0 5-3.2 7-6.4S20.4 5 21 4.6" stroke="var(--brand)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="21" cy="4.6" r="1.9" fill="var(--brand)"/>
+      </svg>
+      <span>Ledger<span class="iq">IQ</span></span>
+    </div>
+    <a href="#ask" class="on"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a7 7 0 0 0-6 10.6L1 15l3.5-1A7 7 0 1 0 8 1Z"/></svg>Ask</a>
+    <a href="#home"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1 1 7v8h5v-5h4v5h5V7L8 1Z"/></svg>Home</a>
+    <a href="#forecast"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M1 13h14v2H1v-2Zm1-3 4-5 3 3 5-6v7H2v-1Z"/></svg>Forecast</a>
+    <a href="#health"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 14S1 10 1 5.5A3.5 3.5 0 0 1 8 4a3.5 3.5 0 0 1 7 1.5C15 10 8 14 8 14Z"/></svg>Health</a>
+    <a href="#whatif"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 2h5v5H2V2Zm7 7h5v5H9V9Zm0-7h5v5H9V2ZM2 9h5v5H2V9Z"/></svg>What If</a>
+    <a href="#brief"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M3 1h10v14H3V1Zm2 3h6v1.5H5V4Zm0 3.5h6V9H5V7.5ZM5 11h4v1.5H5V11Z"/></svg>Brief</a>
+    <a href="#watch"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a4 4 0 0 0-4 4v3L2 11v1h12v-1l-2-3V5a4 4 0 0 0-4-4Zm0 14a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2Z"/></svg>Watch</a>
+    <div class="sep"></div>
+    <div class="grp">Setup</div>
+    <a href="#data"><svg viewBox="0 0 16 16" fill="currentColor"><ellipse cx="8" cy="3.5" rx="6" ry="2.5"/><path d="M2 6.5v3c0 1.4 2.7 2.5 6 2.5s6-1.1 6-2.5v-3C14 7.9 11.3 9 8 9S2 7.9 2 6.5Z"/></svg>Data sources</a>
+    <a href="#team"><svg viewBox="0 0 16 16" fill="currentColor"><circle cx="5.5" cy="5" r="2.5"/><circle cx="11" cy="6" r="2"/><path d="M1 14c0-2.5 2-4 4.5-4S10 11.5 10 14H1Zm10 0c0-1.6-.6-2.9-1.6-3.7A4 4 0 0 1 15 14h-4Z"/></svg>Team</a>
+  </nav>
+
+  <div class="main">
+    <header class="topbar">
+      <span class="org">Northwind Design <span style="color:var(--text-muted);font-size:11px">▾</span></span>
+      <span class="spacer"></span>
+      <span class="fresh"><span class="dot"></span> Updated 6:00am</span>
+      <button class="iconbtn" id="theme" title="Toggle theme" aria-label="Toggle theme">◐</button>
+    </header>
+
+    <div class="page">
+      <div class="note">
+        <b>Design concept.</b> Colours are the validated token set from <code>design-system.md §2</code> —
+        every categorical and status value passed CVD-separation and contrast checks in both light and
+        dark. Figures below are illustrative sample data for a fictional 22-person agency.
+        Try the theme toggle (◐), hover the forecast chart, and edit an assumption in the answer block.
+      </div>
+
+      <div class="greet">Good morning, Dana.</div>
+
+      <!-- ANSWER BAR -->
+      <section class="answerbar" id="home">
+        <p class="lead">Cash is healthy — about 7 months of runway.</p>
+        <p style="color:var(--text-secondary)">One thing needs you: the <b>Nov&nbsp;15 payroll</b> is projected
+          <b class="num">$14,200</b> short. Three overdue invoices would more than cover it.</p>
+        <div class="acts">
+          <button class="btn primary">See the gap</button>
+          <button class="btn">Ask about it</button>
+        </div>
+      </section>
+
+      <!-- TILES -->
+      <section class="tiles">
+        <div class="tile">
+          <div class="lbl">Cash</div>
+          <div class="val num">$247,340</div>
+          <div class="chg up num">▲ 3.1% vs last month</div>
+          <div class="meta">High confidence · 6:00am</div>
+        </div>
+        <div class="tile">
+          <div class="lbl">Runway</div>
+          <div class="val num">7.2 mo</div>
+          <div class="chg up num">▲ 0.4 vs last month</div>
+          <div class="meta">High confidence · 6:00am</div>
+        </div>
+        <div class="tile">
+          <div class="lbl">Revenue <span style="color:var(--text-muted)">TTM</span></div>
+          <div class="val num">$2.19M</div>
+          <div class="chg up num">▲ 12% YoY</div>
+          <div class="meta">High confidence · 4:00am</div>
+        </div>
+        <div class="tile">
+          <!-- margin DOWN is unfavourable → critical colour.
+               An expense tile going down would be POSITIVE colour with the same ▼ glyph.
+               Colour follows is_favorable, never direction. -->
+          <div class="lbl">Gross margin</div>
+          <div class="val num">31.4%</div>
+          <div class="chg down num">▼ 3.2 pts vs last month</div>
+          <div class="meta">Medium confidence · 4:00am</div>
+        </div>
+      </section>
+
+      <!-- FORECAST -->
+      <section class="card" id="forecast">
+        <div class="card-h">
+          <h2>Cash forecast</h2>
+          <span class="spacer"></span>
+          <div class="seg" role="group" aria-label="Horizon">
+            <button class="on">13 weeks</button><button>26 weeks</button>
+          </div>
+          <button class="btn" id="tbl-toggle" style="font-size:12.5px;padding:5px 11px">View as table</button>
+        </div>
+
+        <div class="chartwrap" id="chartwrap">
+          <svg class="chart" id="chart" viewBox="0 0 960 340" role="img"
+               aria-label="Cash forecast. Actual cash rises to $247,340 today, then the projection widens. The P10 line falls below the payroll floor around November 15, indicating a projected shortfall of about $14,200.">
+          </svg>
+        </div>
+
+        <div class="legend" id="legend">
+          <span><i class="swatch" style="background:var(--s1)"></i> Actual</span>
+          <span><i class="swatch dash"></i> Projected (P50)</span>
+          <span><i class="swatch band"></i> P10–P90 range</span>
+          <span><i class="swatch" style="background:var(--text-muted);opacity:.6"></i> Payroll floor</span>
+        </div>
+
+        <div id="tbl" class="hidden" style="padding:16px 20px 4px;overflow-x:auto">
+          <table class="tbl">
+            <thead><tr><th>Date</th><th class="n">P10</th><th class="n">P50</th><th class="n">P90</th><th>Note</th></tr></thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+
+        <div class="risk">
+          <span class="glyph crit">!</span>
+          <span class="body"><b>Nov 15 · Payroll $14,200 short</b> <span>— 3 invoices totalling $38,100 land after the 15th</span></span>
+          <span class="pill crit">Critical</span>
+          <button class="btn">Resolve</button>
+        </div>
+        <div class="risk">
+          <span class="glyph warn">•</span>
+          <span class="body"><b>Sep 15 · Q3 estimated tax ~$18,400</b> <span>— covered at the P50 projection</span></span>
+          <span class="pill warn">Watch</span>
+          <button class="btn">Plan</button>
+        </div>
+      </section>
+
+      <h1 class="sect">Alert</h1>
+
+      <!-- ALERT -->
+      <section class="alert" id="watch">
+        <div class="hd"><span>⚠</span> Critical · 19 days out</div>
+        <h3>Nov 15 payroll is projected $14,200 short.</h3>
+        <p class="why">Payroll runs <b class="num">$68,400</b>. You're projected to have <b class="num">$54,200</b>
+          that morning. Three invoices totalling <b class="num">$38,100</b> are past due — historically these
+          customers pay about 22 days late, which lands them after the 15th.</p>
+        <div class="opts">
+          <div class="opt"><span class="t">Collect 3 overdue invoices</span><span class="amt num">+$38,100</span><button class="btn">Draft emails</button></div>
+          <div class="opt"><span class="t">Defer 2 bills past the 15th</span><span class="amt num">+$9,400</span><button class="btn">Review</button></div>
+          <div class="opt"><span class="t">Draw on your credit line</span><span class="amt num">+$25,000</span><button class="btn">Model cost</button></div>
+        </div>
+        <div class="foot">
+          <button class="btn primary">Model a combination</button>
+          <span class="spacer"></span>
+          <button class="linkish">Not useful?</button>
+        </div>
+      </section>
+
+      <h1 class="sect">Ask</h1>
+
+      <!-- ANSWER BLOCK -->
+      <section class="ask" id="ask">
+        <div class="q">
+          <span class="av">D</span>
+          <p>Can I afford to hire a senior designer at $120k?</p>
+        </div>
+
+        <div class="stages">
+          <span><b>✓</b> Understanding</span>
+          <span><b>✓</b> Pulling your numbers</span>
+          <span><b>✓</b> Analysing</span>
+          <span style="color:var(--text-muted)">2.8s</span>
+        </div>
+
+        <div class="headline">Yes — but wait until October.</div>
+
+        <div class="figs">
+          <button class="fig"><span class="fv num" id="f-loaded">$156,000</span><span class="fl">Fully loaded / yr</span></button>
+          <button class="fig"><span class="fv num" id="f-runway">5.8 mo</span><span class="fl">Runway after</span></button>
+          <button class="fig"><span class="fv num">Month 7</span><span class="fl">Break-even</span></button>
+        </div>
+
+        <p class="why2">A $120k salary costs about <b class="num" id="f-loaded2">$156,000</b> all-in once you include
+          employer taxes, benefits, and equipment. Hiring in October rather than now keeps you clear of the
+          Nov 15 payroll gap, and your Q4 receivables land before the first full quarter of the new salary.</p>
+
+        <details>
+          <summary>Assumptions <span class="hint">1.30× burden · 3-month ramp · $0 revenue lift</span></summary>
+          <div class="assump">
+            <div class="arow"><span class="an">Base salary</span><input class="num" id="a-base" value="120,000" inputmode="numeric"></div>
+            <div class="arow"><span class="an">Burden multiplier <span style="color:var(--text-muted)">— taxes, benefits, equipment</span></span><input class="num" id="a-burden" value="1.30" inputmode="decimal"></div>
+            <div class="arow"><span class="an">Ramp to full productivity</span><input class="num" value="3 months"></div>
+            <div class="arow"><span class="an">Revenue lift <span style="color:var(--text-muted)">— defaults to zero on purpose</span></span><input class="num" value="$0"></div>
+          </div>
+        </details>
+
+        <div class="conf">
+          <span class="badge">Medium</span>
+          <span>14 months of history. Your revenue varies more month-to-month than is typical for your size,
+            so the runway figure carries a wider range than usual.</span>
+        </div>
+
+        <details>
+          <summary>Show the work <span class="hint">4 metrics · engine 2026.07.1</span></summary>
+          <div style="padding:12px 0 4px;font-size:13px;color:var(--text-secondary);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;line-height:1.9">
+            payroll_burden_multiplier → 1.30 <span style="color:var(--text-muted)">(org history, 24 payroll runs)</span><br>
+            monthly_burn → $32,140 <span style="color:var(--text-muted)">(trailing 6mo, 1,284 transactions)</span><br>
+            cash_position → $247,340 <span style="color:var(--text-muted)">(3 accounts, as of 06:00)</span><br>
+            runway_months → 7.2 <span style="color:var(--text-muted)">(cash ÷ burn, seasonality adjusted)</span>
+          </div>
+        </details>
+
+        <div style="display:flex;align-items:center;gap:10px;padding-top:14px;border-top:1px solid var(--border-subtle);margin-top:6px">
+          <button class="btn primary">Model this as a scenario</button>
+          <span class="spacer"></span>
+          <span style="font-size:13px;color:var(--text-muted)">Helpful?</span>
+          <button class="iconbtn" aria-label="Helpful">⌃</button>
+          <button class="iconbtn" aria-label="Not helpful">⌄</button>
+        </div>
+
+        <div class="followups">
+          <button class="chip">What if they don't add revenue?</button>
+          <button class="chip">Contractor instead?</button>
+          <button class="chip">What would make October safe?</button>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ---------- theme toggle ---------- */
+document.getElementById('theme').addEventListener('click', () => {
+  const cur = document.documentElement.getAttribute('data-theme');
+  const sysDark = matchMedia('(prefers-color-scheme: dark)').matches;
+  const now = cur ? cur : (sysDark ? 'dark' : 'light');
+  document.documentElement.setAttribute('data-theme', now === 'dark' ? 'light' : 'dark');
+  draw();
+});
+
+/* ---------- sample data ----------
+   60 days actual + 91 days projected, for a fictional agency.
+   Deterministic (seeded) so the chart is stable across reloads. */
+const DAY = 86400000;
+const today = new Date(2026, 9, 27);           // Oct 27 2026
+const PAYROLL_FLOOR = 68400;
+let seed = 20260727;
+const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+
+const actual = [], proj = [];
+let v = 198000;
+for (let i = 60; i > 0; i--) {
+  v += (rnd() - 0.42) * 9000;
+  if (i % 15 === 0) v -= 34000;                 // semi-monthly payroll
+  if (i % 21 === 0) v += 52000;                 // client payments
+  actual.push({ d: new Date(+today - i * DAY), v: Math.max(v, 60000) });
+}
+actual.push({ d: today, v: 247340 });
+
+/* Build the P50 path first, then pin Nov 15 to $54,200 so the chart agrees with the
+   alert copy ($68,400 payroll − $54,200 projected = $14,200 short). The dip has to
+   visibly cross the payroll floor — that crossing IS the answer to "will I make
+   payroll?", and a chart whose geometry contradicts its own headline is worse than
+   no chart. */
+const NOV15_P50 = 54200;
+const nov15Idx = Math.round((new Date(2026, 10, 15) - today) / DAY);
+const raw = [];
+let p = 247340;
+for (let i = 1; i <= 91; i++) {
+  p += (rnd() - 0.45) * 5200;
+  if (i % 15 === 0) p -= 31000;                 // semi-monthly payroll
+  if (i % 26 === 0) p += 47000;                 // client payments
+  raw.push(p);
+}
+const gap = raw[nov15Idx - 1] - NOV15_P50;      // how far the natural path sits above the pin
+for (let i = 1; i <= 91; i++) {
+  const d = new Date(+today + i * DAY);
+  // Asymmetric taper: a slow drain into the shortfall, then a faster recovery when
+  // the overdue receivables finally land. A symmetric V reads as a chart artifact.
+  const off = i - nov15Idx;
+  const taper = off <= 0 ? Math.max(0, 1 - Math.abs(off) / 26)
+                         : Math.max(0, 1 - off / 11);
+  const p50 = raw[i - 1] - gap * taper;
+  const spread = i * 780;
+  proj.push({ d, p50, p10: p50 - spread, p90: p50 + spread * 0.85 });
+}
+
+/* ---------- chart ---------- */
+const W = 960, H = 340, M = { t: 18, r: 74, b: 34, l: 62 };
+const cs = () => getComputedStyle(document.documentElement);
+const tok = n => cs().getPropertyValue(n).trim();
+
+const allV = [...actual.map(a => a.v), ...proj.map(p => p.p10), ...proj.map(p => p.p90), PAYROLL_FLOOR];
+const yMin = 0, yMax = Math.max(...allV) * 1.08;
+const x0 = +actual[0].d, x1 = +proj[proj.length - 1].d;
+const X = t => M.l + (+t - x0) / (x1 - x0) * (W - M.l - M.r);
+const Y = n => H - M.b - (n - yMin) / (yMax - yMin) * (H - M.t - M.b);
+const money = n => '$' + Math.round(n).toLocaleString('en-US');
+
+function draw() {
+  const c = {
+    s1: tok('--s1'), grid: tok('--border-subtle'), txt: tok('--text-secondary'),
+    muted: tok('--text-muted'), crit: tok('--critical'), surf: tok('--surface-1')
+  };
+  const gridL = [];
+  for (let i = 0; i <= 4; i++) {
+    const val = yMax / 4 * i, y = Y(val);
+    gridL.push(`<line x1="${M.l}" y1="${y}" x2="${W - M.r}" y2="${y}" stroke="${c.grid}" stroke-width="1"/>
+      <text x="${M.l - 10}" y="${y + 4}" text-anchor="end" font-size="11" fill="${c.muted}"
+        font-family="var(--font-ui)" style="font-variant-numeric:tabular-nums">${val >= 1000 ? '$' + Math.round(val / 1000) + 'k' : '$0'}</text>`);
+  }
+
+  const months = [];
+  let cur = new Date(2026, 8, 1);
+  while (+cur < x1) {
+    if (+cur > x0) months.push(`<text x="${X(cur)}" y="${H - 12}" text-anchor="middle" font-size="11"
+      fill="${c.muted}" font-family="var(--font-ui)">${cur.toLocaleString('en', { month: 'short' })}</text>`);
+    cur = new Date(cur.getFullYear(), cur.getMonth() + 1, 1);
+  }
+
+  const actLine = actual.map((a, i) => `${i ? 'L' : 'M'}${X(a.d).toFixed(1)},${Y(a.v).toFixed(1)}`).join(' ');
+  const band = proj.map(p => `${X(p.d).toFixed(1)},${Y(p.p90).toFixed(1)}`).join(' L')
+    + ' L' + [...proj].reverse().map(p => `${X(p.d).toFixed(1)},${Y(p.p10).toFixed(1)}`).join(' L');
+  const p50 = proj.map((p, i) => `${i ? 'L' : 'M'}${X(p.d).toFixed(1)},${Y(p.p50).toFixed(1)}`).join(' ');
+  const joinX = X(today), joinY = Y(247340);
+
+  const nov15 = new Date(2026, 10, 15);
+  const nx = X(nov15), nyPt = proj.find(p => p.d.toDateString() === nov15.toDateString());
+  const ny = nyPt ? Y(nyPt.p50) : Y(PAYROLL_FLOOR);
+
+  document.getElementById('chart').innerHTML = `
+    ${gridL.join('')}
+    <!-- payroll floor reference rule: answers "will I make payroll?" geometrically -->
+    <line x1="${M.l}" y1="${Y(PAYROLL_FLOOR)}" x2="${W - M.r}" y2="${Y(PAYROLL_FLOOR)}"
+      stroke="${c.muted}" stroke-width="1.5" stroke-dasharray="2 4" opacity=".75"/>
+    <text x="${W - M.r + 8}" y="${Y(PAYROLL_FLOOR) + 4}" font-size="10.5" fill="${c.muted}"
+      font-family="var(--font-ui)">payroll floor</text>
+
+    <path d="M${band} Z" fill="${c.s1}" opacity=".16"/>
+    <path d="${actLine}" fill="none" stroke="${c.s1}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+    <path d="M${joinX},${joinY} ${p50.slice(1)}" fill="none" stroke="${c.s1}" stroke-width="2"
+      stroke-dasharray="5 4" stroke-linecap="round"/>
+
+    <!-- today marker: the actual/projected boundary must be unmissable -->
+    <line x1="${joinX}" y1="${M.t}" x2="${joinX}" y2="${H - M.b}" stroke="${c.grid}" stroke-width="1"/>
+    <circle cx="${joinX}" cy="${joinY}" r="4.5" fill="${c.s1}" stroke="${c.surf}" stroke-width="2"/>
+    <text x="${joinX}" y="${M.t - 4}" text-anchor="middle" font-size="10.5" fill="${c.muted}"
+      font-family="var(--font-ui)">today</text>
+
+    <!-- risk event as a marked object on the timeline, not just a dip -->
+    <circle cx="${nx}" cy="${ny}" r="5" fill="${c.crit}" stroke="${c.surf}" stroke-width="2"/>
+    <text x="${nx}" y="${ny + 22}" text-anchor="middle" font-size="10.5" font-weight="600"
+      fill="${c.crit}" font-family="var(--font-ui)">Nov 15</text>
+
+    <!-- direct label on the last point, per the mark specs -->
+    <text x="${X(proj[proj.length - 1].d) + 8}" y="${Y(proj[proj.length - 1].p50) + 4}" font-size="11.5"
+      font-weight="600" fill="${c.s1}" font-family="var(--font-ui)"
+      style="font-variant-numeric:tabular-nums">${money(proj[proj.length - 1].p50)}</text>
+
+    ${months.join('')}
+    <g id="hover" style="pointer-events:none;opacity:0">
+      <line id="hv-line" y1="${M.t}" y2="${H - M.b}" stroke="${c.muted}" stroke-width="1" stroke-dasharray="3 3"/>
+      <circle id="hv-dot" r="4.5" fill="${c.s1}" stroke="${c.surf}" stroke-width="2"/>
+      <g id="hv-box">
+        <rect id="hv-rect" rx="5" fill="${c.surf}" stroke="${tok('--border-strong')}" stroke-width="1"/>
+        <text id="hv-t1" font-size="11" font-weight="600" fill="${tok('--text-primary')}"
+          font-family="var(--font-ui)" style="font-variant-numeric:tabular-nums"></text>
+        <text id="hv-t2" font-size="10.5" fill="${c.txt}" font-family="var(--font-ui)"
+          style="font-variant-numeric:tabular-nums"></text>
+      </g>
+    </g>`;
+  wireHover();
+}
+
+function wireHover() {
+  const svg = document.getElementById('chart');
+  const g = document.getElementById('hover');
+  const series = [...actual.map(a => ({ d: a.d, v: a.v, k: 'Actual' })),
+                  ...proj.map(p => ({ d: p.d, v: p.p50, lo: p.p10, hi: p.p90, k: 'Projected' }))];
+  svg.addEventListener('pointerleave', () => g.style.opacity = 0);
+  svg.addEventListener('pointermove', e => {
+    const r = svg.getBoundingClientRect();
+    const px = (e.clientX - r.left) / r.width * W;
+    let best = series[0], bd = Infinity;
+    for (const s of series) { const d = Math.abs(X(s.d) - px); if (d < bd) { bd = d; best = s; } }
+    const cx = X(best.d), cy = Y(best.v);
+    g.style.opacity = 1;
+    document.getElementById('hv-line').setAttribute('x1', cx);
+    document.getElementById('hv-line').setAttribute('x2', cx);
+    document.getElementById('hv-dot').setAttribute('cx', cx);
+    document.getElementById('hv-dot').setAttribute('cy', cy);
+    const t1 = document.getElementById('hv-t1'), t2 = document.getElementById('hv-t2');
+    t1.textContent = money(best.v);
+    t2.textContent = best.lo
+      ? `${best.d.toLocaleDateString('en', { month: 'short', day: 'numeric' })} · ${money(best.lo)}–${money(best.hi)}`
+      : `${best.d.toLocaleDateString('en', { month: 'short', day: 'numeric' })} · actual`;
+    const w = Math.max(t1.getComputedTextLength(), t2.getComputedTextLength()) + 20;
+    const bx = Math.min(Math.max(cx - w / 2, M.l), W - M.r - w), by = Math.max(cy - 52, M.t);
+    document.getElementById('hv-rect').setAttribute('x', bx);
+    document.getElementById('hv-rect').setAttribute('y', by);
+    document.getElementById('hv-rect').setAttribute('width', w);
+    document.getElementById('hv-rect').setAttribute('height', 40);
+    t1.setAttribute('x', bx + 10); t1.setAttribute('y', by + 17);
+    t2.setAttribute('x', bx + 10); t2.setAttribute('y', by + 32);
+  });
+}
+
+/* ---------- table view (also satisfies the light-mode contrast relief rule) ---------- */
+document.getElementById('tbl-toggle').addEventListener('click', e => {
+  const t = document.getElementById('tbl'), c = document.getElementById('chartwrap'), l = document.getElementById('legend');
+  const showing = t.classList.toggle('hidden');
+  c.classList.toggle('hidden', !showing); l.classList.toggle('hidden', !showing);
+  e.target.textContent = showing ? 'View as table' : 'View as chart';
+});
+document.getElementById('tbody').innerHTML = proj.filter((_, i) => i % 7 === 0).map(p => {
+  const risky = p.p10 < PAYROLL_FLOOR;
+  return `<tr><td>${p.d.toLocaleDateString('en', { month: 'short', day: 'numeric' })}</td>
+    <td class="n">${money(p.p10)}</td><td class="n">${money(p.p50)}</td><td class="n">${money(p.p90)}</td>
+    <td style="color:${risky ? 'var(--critical)' : 'var(--text-muted)'}">${risky ? 'Below payroll floor' : '—'}</td></tr>`;
+}).join('');
+
+/* ---------- live assumption editing ---------- */
+function recompute() {
+  const base = parseFloat(document.getElementById('a-base').value.replace(/[^0-9.]/g, '')) || 0;
+  const burden = parseFloat(document.getElementById('a-burden').value.replace(/[^0-9.]/g, '')) || 1;
+  const loaded = Math.round(base * burden);
+  document.getElementById('f-loaded').textContent = money(loaded);
+  document.getElementById('f-loaded2').textContent = money(loaded);
+  // Illustrative: runway shrinks as loaded cost rises against a $32,140/mo burn.
+  const runway = Math.max(0, 7.2 - (loaded / 12) / 32140 * 5.4);
+  document.getElementById('f-runway').textContent = runway.toFixed(1) + ' mo';
+}
+document.getElementById('a-base').addEventListener('input', recompute);
+document.getElementById('a-burden').addEventListener('input', recompute);
+
+draw();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', draw);
+</script>
+</body>
+</html>
