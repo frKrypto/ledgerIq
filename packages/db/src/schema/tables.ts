@@ -1,5 +1,6 @@
 import {
   bigserial,
+  date,
   boolean,
   char,
   index,
@@ -140,6 +141,11 @@ export const connections = pgTable(
     nextSyncAt: timestamp('next_sync_at', { withTimezone: true }),
     syncCursor: text('sync_cursor'),
     backfillCompletedAt: timestamp('backfill_completed_at', { withTimezone: true }),
+    // Added in 0004_ingestion.sql for the backfill orchestrator.
+    tokenExpiresAt: timestamp('token_expires_at', { withTimezone: true }),
+    realmId: text('realm_id'),
+    backfillStartedAt: timestamp('backfill_started_at', { withTimezone: true }),
+    consecutiveFailures: integer('consecutive_failures').notNull().default(0),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     disconnectedAt: timestamp('disconnected_at', { withTimezone: true }),
   },
@@ -195,6 +201,62 @@ export const dataAccessLog = pgTable('data_access_log', {
   accessedAt: timestamp('accessed_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
+
+export const rawPayloads = pgTable(
+  'raw_payloads',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    orgId: uuid('org_id').notNull().references(() => organizations.id, { onDelete: 'cascade' }),
+    connectionId: uuid('connection_id')
+      .notNull()
+      .references(() => connections.id, { onDelete: 'cascade' }),
+    syncRunId: uuid('sync_run_id').references(() => syncRuns.id, { onDelete: 'set null' }),
+    objectKey: text('object_key').notNull(),
+    /** sha256 over the semantic records, not the provider envelope. */
+    contentHash: text('content_hash').notNull(),
+    byteSize: integer('byte_size').notNull(),
+    recordType: text('record_type').notNull(),
+    recordCount: integer('record_count').notNull().default(0),
+    pageIndex: integer('page_index'),
+    windowStart: date('window_start'),
+    windowEnd: date('window_end'),
+    fetchedAt: timestamp('fetched_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('raw_payloads_lookup').on(t.orgId, t.connectionId, t.recordType)],
+);
+
+export const syncCheckpoints = pgTable(
+  'sync_checkpoints',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    orgId: uuid('org_id').notNull().references(() => organizations.id, { onDelete: 'cascade' }),
+    connectionId: uuid('connection_id')
+      .notNull()
+      .references(() => connections.id, { onDelete: 'cascade' }),
+    recordType: text('record_type').notNull(),
+    phase: text('phase').notNull().default('backfill'),
+    cursor: jsonb('cursor').notNull().default({}),
+    recordsSeen: integer('records_seen').notNull().default(0),
+    completedAt: timestamp('completed_at', { withTimezone: true }),
+    lastError: text('last_error'),
+    attemptCount: integer('attempt_count').notNull().default(0),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('sync_checkpoints_conn_type_key').on(t.connectionId, t.recordType)],
+);
+
+export const tenantDataKeys = pgTable('tenant_data_keys', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  orgId: uuid('org_id').notNull().references(() => organizations.id, { onDelete: 'cascade' }),
+  /** DEK ciphertext under the KMS root key. The plaintext key is never stored. */
+  wrappedKey: text('wrapped_key').notNull(),
+  kmsKeyId: text('kms_key_id').notNull(),
+  version: integer('version').notNull().default(1),
+  isCurrent: boolean('is_current').notNull().default(true),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  retiredAt: timestamp('retired_at', { withTimezone: true }),
+});
+
 /**
  * Tables carrying tenant data, each protected by an RLS policy in 0002_rls.sql.
  * The tenancy suite iterates this list, so a new tenant table added without a
@@ -209,6 +271,9 @@ export const TENANT_SCOPED_TABLES = [
   'firm_clients',
   'audit_log',
   'data_access_log',
+  'raw_payloads',
+  'sync_checkpoints',
+  'tenant_data_keys',
 ] as const;
 
 /**

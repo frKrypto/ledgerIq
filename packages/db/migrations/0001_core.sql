@@ -133,7 +133,12 @@ CREATE TABLE connections (
     status_detail           TEXT,
     -- Sealed with a per-tenant data key from the KMS hierarchy (security.md §4).
     -- A dumped database yields no usable provider tokens.
-    credentials_encrypted   BYTEA,
+    --
+    -- TEXT holding base64 rather than BYTEA: it round-trips identically through
+    -- every driver and pooler, and it is greppable in tests — which matters,
+    -- because the test that proves no plaintext token reaches the database scans
+    -- this column directly. The ~33% size overhead is irrelevant for credentials.
+    credentials_encrypted   TEXT,
     credentials_key_id      TEXT,
     scopes_granted          TEXT[],
     connected_by            UUID REFERENCES users(id),

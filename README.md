@@ -87,8 +87,9 @@ sourcing. Treat them as a model to argue with, not facts to cite.
 
 ## Status
 
-**Sprint 1 complete.** The tenancy spine is built and tested; there is no user-facing product yet
-and won't be until roughly sprint 7 — see [the sprint plan](docs/05-execution/sprint-plan.md).
+**Sprints 1–2 complete.** The tenancy spine and the QuickBooks ingestion pipeline are built and
+tested; there is no user-facing product yet and won't be until roughly sprint 7 — see
+[the sprint plan](docs/05-execution/sprint-plan.md).
 
 | Delivered | Where |
 |---|---|
@@ -98,14 +99,26 @@ and won't be until roughly sprint 7 — see [the sprint plan](docs/05-execution/
 | Typed tenant context — unscoped queries don't compile | `packages/db/src/tenant-context.ts` |
 | **Adversarial tenancy suite (blocks CI, no override)** | `packages/db/test/tenancy.test.ts` |
 | Terraform database module with the app-role security control | `infra/modules/database/` |
+| Per-tenant envelope encryption (AES-256-GCM under a KMS root key) | `packages/crypto/` |
+| Rate-limited HTTP client: 429/Retry-After, jittered backoff, circuit breaker | `packages/connectors/src/http.ts` |
+| Immutable raw-payload archive with content-addressed dedup | `packages/connectors/src/archive.ts` |
+| QuickBooks adapter: OAuth, rotating refresh tokens, paginated sync | `packages/connectors/src/quickbooks/` |
+| **Resumable backfill — archive-then-checkpoint ordering** | `packages/connectors/src/sync/backfill.ts` |
+| Credential vault proving a database dump yields no usable tokens | `packages/db/src/repositories/credentials.ts` |
 
 ```bash
 npm install && docker compose up -d postgres
-npm run db:migrate && npm test        # 59 tests
+npm run db:migrate && npm test        # 97 tests
 ```
 
 Verified, not assumed: the isolation suite was mutation-tested — removing `FORCE ROW LEVEL
 SECURITY` and changing the tenant scope from transaction-local to session-local each turn it red.
 Developer guide and the three non-negotiable rules: [CONTRIBUTING.md](CONTRIBUTING.md).
 
-**Next:** sprint 2 — the QuickBooks connector, OAuth, and resumable 24-month backfill.
+Sprint 2 is tested against a **fake QuickBooks server** that reproduces the real API's quirks —
+1-indexed pagination, omitted entity arrays at end-of-results, rotating refresh tokens, 429s with
+`Retry-After`, and mid-stream token expiry. That server caught a real bug: QBO stamps every response
+with a timestamp, so hashing the whole payload made re-fetched pages look unique and silently
+defeated deduplication on the retry path.
+
+**Next:** sprint 3 — normalization into the canonical model, and the chart-of-accounts mapping.

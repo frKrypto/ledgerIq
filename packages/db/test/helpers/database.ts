@@ -1,4 +1,5 @@
 import pg from 'pg';
+import { randomBytes } from 'node:crypto';
 import type { Pool } from 'pg';
 import { migrate } from '../../src/migrate.js';
 import { createPool } from '../../src/client.js';
@@ -35,17 +36,35 @@ function appConnectionString(adminUrl: string): string {
 }
 
 export async function setupTestDatabase(): Promise<TestDatabase> {
-  const adminUrl =
+  const baseUrl =
     process.env['TEST_DATABASE_URL'] ??
     process.env['ADMIN_DATABASE_URL'] ??
     'postgres://postgres@localhost:5432/ledgeriq_test';
 
-  const adminPool = createPool({ connectionString: adminUrl, applicationName: 'ledgeriq-test-admin' });
+  // Each test FILE gets its own database.
+  //
+  // Sharing one and recreating the schema per file races: two files entering
+  // setup concurrently both issue CREATE SCHEMA and one loses on
+  // pg_namespace_nspname_index. A dedicated database is fully isolated, makes
+  // the suite parallel-safe, and removes a class of flake that would otherwise
+  // be blamed on the code under test.
+  const dbName = `lq_test_${randomBytes(6).toString('hex')}`;
 
-  // Fresh schema every run: a leftover object from a previous shape produces
-  // failures that look like logic bugs.
-  await adminPool.query('DROP SCHEMA IF EXISTS public CASCADE');
-  await adminPool.query('CREATE SCHEMA public');
+  const bootstrapPool = createPool({
+    connectionString: baseUrl,
+    applicationName: 'ledgeriq-test-bootstrap',
+    maxConnections: 2,
+  });
+  await bootstrapPool.query(`CREATE DATABASE ${dbName}`);
+  await bootstrapPool.end();
+
+  const adminUrl = (() => {
+    const u = new URL(baseUrl);
+    u.pathname = `/${dbName}`;
+    return u.toString();
+  })();
+
+  const adminPool = createPool({ connectionString: adminUrl, applicationName: 'ledgeriq-test-admin' });
 
   await adminPool.query(`
     DO $$
@@ -73,6 +92,13 @@ export async function setupTestDatabase(): Promise<TestDatabase> {
     close: async () => {
       await appPool.end();
       await adminPool.end();
+
+      const cleanup = createPool({ connectionString: baseUrl, maxConnections: 1 });
+      try {
+        await cleanup.query(`DROP DATABASE IF EXISTS ${dbName} WITH (FORCE)`);
+      } finally {
+        await cleanup.end();
+      }
     },
   };
 }
