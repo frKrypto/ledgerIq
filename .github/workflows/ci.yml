@@ -1,0 +1,117 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '22'
+
+jobs:
+  static:
+    name: Typecheck & lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+
+  unit:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - run: npm run test -- --project unit
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # The gate that guards the failure that ends the company.
+  #
+  # This job is REQUIRED and has no override path. There is no deadline that
+  # justifies merging past it: it runs in seconds, and the bug it catches is one
+  # customer seeing another's financials.
+  #
+  # It runs against a real Postgres, never a mock — the guarantee being tested is
+  # a property of the database, so testing it anywhere else proves nothing.
+  # ───────────────────────────────────────────────────────────────────────────
+  tenancy:
+    name: Tenant isolation (required)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_HOST_AUTH_METHOD: trust
+          POSTGRES_DB: ledgeriq_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - name: Run adversarial tenancy suite
+        env:
+          TEST_DATABASE_URL: postgres://postgres@localhost:5432/ledgeriq_test
+        run: npm run test -- --project tenancy
+
+  migrations:
+    name: Migrations apply cleanly from scratch
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_HOST_AUTH_METHOD: trust
+          POSTGRES_DB: ledgeriq_migrate
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - name: Apply migrations
+        env:
+          ADMIN_DATABASE_URL: postgres://postgres@localhost:5432/ledgeriq_migrate
+        run: npm run db:migrate
+      - name: Re-run to prove idempotence
+        env:
+          ADMIN_DATABASE_URL: postgres://postgres@localhost:5432/ledgeriq_migrate
+        run: npm run db:migrate
+
+  # Placeholder for the second blocking gate, added in sprint 10 when the
+  # reasoning pipeline lands: no answer may reach a user containing a number the
+  # metric engine did not compute. A prompt change is a production change and
+  # goes through the same gate as code.
+  #
+  # grounding:
+  #   name: AI grounding suite (required from sprint 10)

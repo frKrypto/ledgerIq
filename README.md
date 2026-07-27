@@ -87,6 +87,25 @@ sourcing. Treat them as a model to argue with, not facts to cite.
 
 ## Status
 
-Planning artifacts only — no application code yet. Sprint 1 scope is defined in
-[the sprint plan](docs/05-execution/sprint-plan.md); the first commit of application code should
-be the ingestion pipeline and the metric engine, in that order, before any UI.
+**Sprint 1 complete.** The tenancy spine is built and tested; there is no user-facing product yet
+and won't be until roughly sprint 7 — see [the sprint plan](docs/05-execution/sprint-plan.md).
+
+| Delivered | Where |
+|---|---|
+| Monorepo, TypeScript strict, CI pipeline | `package.json`, `.github/workflows/ci.yml` |
+| Money type — integer minor units, never float | `packages/core/src/money.ts` |
+| Core schema + RLS migrations | `packages/db/migrations/` |
+| Typed tenant context — unscoped queries don't compile | `packages/db/src/tenant-context.ts` |
+| **Adversarial tenancy suite (blocks CI, no override)** | `packages/db/test/tenancy.test.ts` |
+| Terraform database module with the app-role security control | `infra/modules/database/` |
+
+```bash
+npm install && docker compose up -d postgres
+npm run db:migrate && npm test        # 59 tests
+```
+
+Verified, not assumed: the isolation suite was mutation-tested — removing `FORCE ROW LEVEL
+SECURITY` and changing the tenant scope from transaction-local to session-local each turn it red.
+Developer guide and the three non-negotiable rules: [CONTRIBUTING.md](CONTRIBUTING.md).
+
+**Next:** sprint 2 — the QuickBooks connector, OAuth, and resumable 24-month backfill.
