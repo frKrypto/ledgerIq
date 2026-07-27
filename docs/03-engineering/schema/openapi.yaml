@@ -1,0 +1,1333 @@
+openapi: 3.1.0
+info:
+  title: LedgerIQ Public API
+  version: "1.0.0"
+  description: |
+    Public REST API for LedgerIQ — an AI CFO platform for small and medium businesses.
+
+    Design notes that differ from a typical CRUD API:
+
+    * Every computed number is returned as a `Figure` carrying its period, confidence, and
+      provenance. Bare numbers are never returned for computed values.
+    * `insufficient_data` is a first-class error. When a metric cannot be computed honestly for a
+      given business, the API says so rather than returning zero or null.
+    * All responses carry data freshness per connected source.
+    * Money is an object with a decimal string, never a JSON float.
+
+    Narrative prose: ../api-spec.md
+  contact:
+    name: LedgerIQ Engineering
+  license:
+    name: Proprietary
+
+servers:
+  - url: https://api.ledgeriq.com/v1
+    description: Production
+  - url: https://api.sandbox.ledgeriq.com/v1
+    description: Sandbox (synthetic businesses, safe to write against)
+
+security:
+  - ApiKeyAuth: []
+  - OAuth2: [read:metrics]
+
+tags:
+  - name: Metrics
+  - name: Cash & Forecasting
+  - name: AI CFO
+  - name: Scenarios
+  - name: Transactions
+  - name: Entities
+  - name: Alerts
+  - name: Reports
+  - name: Connections
+  - name: Firm
+
+paths:
+  /metrics:
+    get:
+      tags: [Metrics]
+      summary: List metrics and their availability for this organization
+      description: |
+        Availability varies by business model and connected sources. Clients should render from
+        this list rather than hardcoding metrics — showing a fabricated CAC to an agency teaches
+        users to distrust every other number.
+      parameters:
+        - $ref: '#/components/parameters/OrgHeader'
+      responses:
+        '200':
+          description: Metric catalog with per-metric availability
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/MetricAvailability' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /metrics/{key}:
+    get:
+      tags: [Metrics]
+      summary: Compute a single metric for a period
+      parameters:
+        - $ref: '#/components/parameters/OrgHeader'
+        - name: key
+          in: path
+          required: true
+          schema: { type: string, example: runway_months }
+        - name: period
+          in: query
+          schema: { type: string, example: "2026-07" }
+          description: ISO period (YYYY, YYYY-Qn, YYYY-MM, or YYYY-MM-DD/YYYY-MM-DD)
+        - name: compare_to
+          in: query
+          schema: { type: string, example: "2026-06" }
+      responses:
+        '200':
+          description: The computed figure, with comparison when requested
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [figure, freshness]
+                properties:
+                  figure:     { $ref: '#/components/schemas/Figure' }
+                  comparison: { $ref: '#/components/schemas/Comparison' }
+                  freshness:  { $ref: '#/components/schemas/DataFreshness' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/InsufficientData' }
+
+  /metrics/{key}/series:
+    get:
+      tags: [Metrics]
+      summary: Time series for a metric
+      parameters:
+        - $ref: '#/components/parameters/OrgHeader'
+        - name: key
+          in: path
+          required: true
+          schema: { type: string }
+        - name: grain
+          in: query
+          schema: { type: string, enum: [day, week, month, quarter, year], default: month }
+        - name: from
+          in: query
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: Ordered series
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Figure' }
+                  freshness: { $ref: '#/components/schemas/DataFreshness' }
+        '422': { $ref: '#/components/responses/InsufficientData' }
+
+  /metrics/{key}/sources:
+    get:
+      tags: [Metrics]
+      summary: Drill down to the source records behind a figure
+      description: |
+        The provenance endpoint. Every figure in the product resolves here, which is what makes
+        "show me the work" possible and is the strongest trust-building interaction available.
+      parameters:
+        - $ref: '#/components/parameters/OrgHeader'
+        - name: key
+          in: path
+          required: true
+          schema: { type: string }
+        - name: period
+          in: query
+          schema: { type: string }
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: Contributing source records
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/CursorPage'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/Transaction' }
+
+  /metrics/{key}/decomposition:
+    get:
+      tags: [Metrics]
+      summary: Ranked drivers of a metric's change between two periods
+      description: The computation behind "why did profit decrease this month?"
+      parameters:
+        - $ref: '#/components/parameters/OrgHeader'
+        - name: key
+          in: path
+          required: true
+          schema: { type: string, example: gross_margin }
+        - name: period
+          in: query
+          required: true
+          schema: { type: string }
+        - name: compare_to
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Ranked contributing factors
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_change: { $ref: '#/components/schemas/Figure' }
+                  drivers:
+                    type: array
+                    items: { $ref: '#/components/schemas/Driver' }
+
+  /metrics/batch:
+    post:
+      tags: [Metrics]
+      summary: Compute up to 50 metrics in one request
+      description: Dashboard load path. Partial failure is normal and reported per metric.
+      parameters:
+        - $ref: '#/components/parameters/OrgHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [metrics]
+              properties:
+                metrics:
+                  type: array
+                  maxItems: 50
+                  items:
+                    type: object
+                    required: [key]
+                    properties:
+                      key:        { type: string }
+                      period:     { type: string }
+                      compare_to: { type: string }
+      responses:
+        '200':
+          description: Results keyed by metric; unavailable metrics carry a reason
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: object
+                    additionalProperties:
+                      oneOf:
+                        - $ref: '#/components/schemas/Figure'
+                        - $ref: '#/components/schemas/MetricUnavailable'
+                  freshness: { $ref: '#/components/schemas/DataFreshness' }
+
+  /cash/position:
+    get:
+      tags: [Cash & Forecasting]
+      summary: Current cash across accounts included in cash
+      parameters:
+        - $ref: '#/components/parameters/OrgHeader'
+      responses:
+        '200':
+          description: Cash position
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total:      { $ref: '#/components/schemas/Money' }
+                  by_account:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        account_id: { type: string, format: uuid }
+                        name:       { type: string }
+                        balance:    { $ref: '#/components/schemas/Money' }
+                        as_of:      { type: string, format: date-time }
+                  freshness: { $ref: '#/components/schemas/DataFreshness' }
+
+  /forecasts/cash:
+    get:
+      tags: [Cash & Forecasting]
+      summary: Latest 13-week daily cash projection with confidence band
+      parameters:
+        - $ref: '#/components/parameters/OrgHeader'
+        - name: horizon_days
+          in: query
+          schema: { type: integer, default: 91, maximum: 365 }
+        - name: scenario_id
+          in: query
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Forecast with per-stream decomposition and named risks
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Forecast' }
+        '422': { $ref: '#/components/responses/InsufficientData' }
+
+  /forecasts/cash/accuracy:
+    get:
+      tags: [Cash & Forecasting]
+      summary: Our measured forecast accuracy for this organization
+      description: |
+        We publish our own error rate. Exposing it in the API is a deliberate commitment device —
+        it is much harder to quietly stop measuring something partners can query.
+      parameters:
+        - $ref: '#/components/parameters/OrgHeader'
+      responses:
+        '200':
+          description: MAPE by horizon, with sample counts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  horizons:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        horizon_days:      { type: integer, enum: [7, 30, 90] }
+                        mean_abs_pct_error: { type: number, example: 5.8 }
+                        within_band_rate:  { type: number, example: 0.91 }
+                        sample_count:      { type: integer }
+                  measured_since: { type: string, format: date }
+
+  /forecasts/risks:
+    get:
+      tags: [Cash & Forecasting]
+      summary: Named forward-looking risk events
+      parameters:
+        - $ref: '#/components/parameters/OrgHeader'
+      responses:
+        '200':
+          description: Risk events, soonest first
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/RiskEvent' }
+
+  /ask:
+    post:
+      tags: [AI CFO]
+      summary: Ask a financial question in natural language
+      description: |
+        Returns a grounded answer following the answer contract. Every number in the response
+        originates from the deterministic metric engine — the language model narrates over
+        verified values and cannot emit an unsourced figure.
+
+        Set `stream: true` for `text/event-stream` with staged progress events
+        (`classifying`, `planning`, `computing`, `writing`).
+      parameters:
+        - $ref: '#/components/parameters/OrgHeader'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [question]
+              properties:
+                question:        { type: string, maxLength: 2000 }
+                conversation_id: { type: string, format: uuid }
+                stream:          { type: boolean, default: false }
+                include_trace:   { type: boolean, default: false }
+                literacy:
+                  type: string
+                  enum: [simple, standard, expert]
+                  default: standard
+      responses:
+        '200':
+          description: A grounded answer
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Answer' }
+            text/event-stream:
+              schema: { type: string }
+        '422':
+          description: Question is outside the supported coverage, or required data is not connected
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+
+  /ask/{trace_id}:
+    get:
+      tags: [AI CFO]
+      summary: Retrieve a completed answer and its full reasoning trace
+      parameters:
+        - $ref: '#/components/parameters/OrgHeader'
+        - name: trace_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Answer with trace
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Answer'
+                  - type: object
+                    properties:
+                      trace: { $ref: '#/components/schemas/AnswerTrace' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /ask/{trace_id}/feedback:
+    post:
+      tags: [AI CFO]
+      summary: Rate an answer
+      description: Negative feedback enters the evaluation triage queue.
+      parameters:
+        - $ref: '#/components/parameters/OrgHeader'
+        - name: trace_id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [rating]
+              properties:
+                rating: { type: string, enum: [helpful, not_helpful, incorrect] }
+                note:   { type: string, maxLength: 1000 }
+      responses:
+        '204': { description: Recorded }
+
+  /scenarios:
+    get:
+      tags: [Scenarios]
+      summary: List saved scenarios
+      parameters:
+        - $ref: '#/components/parameters/OrgHeader'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: Saved scenarios
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/CursorPage'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/Scenario' }
+    post:
+      tags: [Scenarios]
+      summary: Create and run a scenario
+      parameters:
+        - $ref: '#/components/parameters/OrgHeader'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [kind, inputs]
+              properties:
+                name: { type: string }
+                kind:
+                  type: string
+                  enum: [hire, terminate, price_change, lose_customer, win_customer,
+                         purchase_equipment, take_loan, open_location, cut_costs, change_terms]
+                inputs: { type: object, additionalProperties: true }
+                assumption_overrides:
+                  type: object
+                  additionalProperties: true
+                  description: Override any engine assumption; returned assumptions are editable by design
+      responses:
+        '201':
+          description: Scenario with computed impact
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Scenario' }
+
+  /scenarios/{id}:
+    get:
+      tags: [Scenarios]
+      summary: Retrieve a scenario
+      parameters:
+        - $ref: '#/components/parameters/OrgHeader'
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: Scenario
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Scenario' }
+    patch:
+      tags: [Scenarios]
+      summary: Edit assumptions and recompute
+      parameters:
+        - $ref: '#/components/parameters/OrgHeader'
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:                 { type: string }
+                inputs:               { type: object, additionalProperties: true }
+                assumption_overrides: { type: object, additionalProperties: true }
+      responses:
+        '200':
+          description: Recomputed scenario
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Scenario' }
+    delete:
+      tags: [Scenarios]
+      summary: Delete a scenario
+      parameters:
+        - $ref: '#/components/parameters/OrgHeader'
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '204': { description: Deleted }
+
+  /transactions:
+    get:
+      tags: [Transactions]
+      summary: List transactions
+      description: |
+        Defaults to canonical, non-transfer, non-voided records — the set that produces correct
+        sums. Duplicates-across-sources and internal transfers require explicit opt-in via
+        `include`, because the default must be the one that does not inflate revenue and expense.
+      parameters:
+        - $ref: '#/components/parameters/OrgHeader'
+        - name: from
+          in: query
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          schema: { type: string, format: date }
+        - name: category_id
+          in: query
+          schema: { type: string, format: uuid }
+        - name: customer_id
+          in: query
+          schema: { type: string, format: uuid }
+        - name: vendor_id
+          in: query
+          schema: { type: string, format: uuid }
+        - name: direction
+          in: query
+          schema: { type: string, enum: [inflow, outflow] }
+        - name: min_amount
+          in: query
+          schema: { type: string }
+        - name: include
+          in: query
+          description: Opt in to normally-excluded records
+          schema:
+            type: array
+            items: { type: string, enum: [mirrors, transfers, voided] }
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: Transactions
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/CursorPage'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/Transaction' }
+
+  /transactions/{id}:
+    get:
+      tags: [Transactions]
+      summary: Retrieve a transaction with full lineage
+      parameters:
+        - $ref: '#/components/parameters/OrgHeader'
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: Transaction with lineage to the raw source payload
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Transaction' }
+    patch:
+      tags: [Transactions]
+      summary: Override a transaction's category
+      description: A user override locks the record against future automatic re-categorization.
+      parameters:
+        - $ref: '#/components/parameters/OrgHeader'
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                category_id: { type: string, format: uuid }
+                memo:        { type: string }
+      responses:
+        '200':
+          description: Updated transaction
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Transaction' }
+
+  /customers:
+    get:
+      tags: [Entities]
+      summary: List customers with revenue and payment behavior
+      parameters:
+        - $ref: '#/components/parameters/OrgHeader'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: Customers
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/CursorPage'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/Customer' }
+
+  /customers/{id}/profitability:
+    get:
+      tags: [Entities]
+      summary: Profitability for one customer
+      description: Requires job-costing data; returns `insufficient_data` when the books lack it.
+      parameters:
+        - $ref: '#/components/parameters/OrgHeader'
+        - $ref: '#/components/parameters/IdPath'
+        - name: period
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: Revenue, attributable cost, and margin
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  revenue: { $ref: '#/components/schemas/Figure' }
+                  cost:    { $ref: '#/components/schemas/Figure' }
+                  margin:  { $ref: '#/components/schemas/Figure' }
+        '422': { $ref: '#/components/responses/InsufficientData' }
+
+  /invoices:
+    get:
+      tags: [Entities]
+      summary: List invoices with expected payment timing
+      description: |
+        `expected_payment_date` is derived from the customer's observed payment behavior, not from
+        the invoice due date. This distinction is the largest single driver of forecast accuracy.
+      parameters:
+        - $ref: '#/components/parameters/OrgHeader'
+        - name: status
+          in: query
+          schema: { type: string, enum: [draft, open, partial, paid, overdue, void, written_off] }
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: Invoices
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/CursorPage'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/Invoice' }
+
+  /alerts:
+    get:
+      tags: [Alerts]
+      summary: List alerts
+      parameters:
+        - $ref: '#/components/parameters/OrgHeader'
+        - name: state
+          in: query
+          schema: { type: string, enum: [pending, sent, acknowledged, dismissed, resolved] }
+        - name: severity
+          in: query
+          schema: { type: string, enum: [critical, high, medium, info] }
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: Alerts
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/CursorPage'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/Alert' }
+
+  /alerts/{id}/feedback:
+    post:
+      tags: [Alerts]
+      summary: Rate an alert's usefulness
+      description: Feedback tunes this organization's materiality thresholds.
+      parameters:
+        - $ref: '#/components/parameters/OrgHeader'
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [rating]
+              properties:
+                rating: { type: string, enum: [useful, not_useful, wrong] }
+      responses:
+        '204': { description: Recorded }
+
+  /reports:
+    get:
+      tags: [Reports]
+      summary: List generated reports
+      parameters:
+        - $ref: '#/components/parameters/OrgHeader'
+        - name: kind
+          in: query
+          schema: { type: string, enum: [weekly_brief, monthly, quarterly, board, investor, tax, expense] }
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: Reports
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/CursorPage'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/Report' }
+    post:
+      tags: [Reports]
+      summary: Generate a report on demand
+      parameters:
+        - $ref: '#/components/parameters/OrgHeader'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [kind]
+              properties:
+                kind:         { type: string }
+                period_start: { type: string, format: date }
+                period_end:   { type: string, format: date }
+      responses:
+        '202':
+          description: Generation accepted; poll the report resource
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  report_id: { type: string, format: uuid }
+                  status:    { type: string, enum: [generating] }
+
+  /connections:
+    get:
+      tags: [Connections]
+      summary: Connection status and freshness
+      description: Credentials are never readable through the API under any scope.
+      parameters:
+        - $ref: '#/components/parameters/OrgHeader'
+      responses:
+        '200':
+          description: Connections
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Connection' }
+
+  /connections/link_token:
+    post:
+      tags: [Connections]
+      summary: Create a short-lived token to start a provider connect flow
+      description: Raw provider credentials never transit the LedgerIQ API.
+      parameters:
+        - $ref: '#/components/parameters/OrgHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [source]
+              properties:
+                source: { type: string, enum: [quickbooks, xero, plaid, stripe] }
+      responses:
+        '201':
+          description: Link token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  link_token: { type: string }
+                  expires_at: { type: string, format: date-time }
+
+  /firm/clients:
+    get:
+      tags: [Firm]
+      summary: Organizations this firm has been granted access to
+      responses:
+        '200':
+          description: Client list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        org_id:       { type: string, format: uuid }
+                        name:         { type: string }
+                        access_level: { type: string }
+                        granted_at:   { type: string, format: date-time }
+
+  /firm/dashboard:
+    get:
+      tags: [Firm]
+      summary: Cross-client risk ranking
+      description: |
+        Returns rollup summaries only. Transaction-level data always requires a request scoped to a
+        single organization via `X-LedgerIQ-Org` — breadth of access is never achieved by widening
+        a tenant scope.
+      responses:
+        '200':
+          description: Clients ranked by attention needed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        org_id:              { type: string, format: uuid }
+                        name:                { type: string }
+                        health_score:        { type: integer }
+                        runway_months:       { type: number }
+                        critical_alert_count: { type: integer }
+                        needs_attention:     { type: boolean }
+                        data_stale:          { type: boolean }
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: http
+      scheme: bearer
+      description: "API key: `Authorization: Bearer lq_live_...`. Scoped to one organization."
+    OAuth2:
+      type: oauth2
+      description: Authorization code with PKCE, for third-party apps acting on a user's behalf.
+      flows:
+        authorizationCode:
+          authorizationUrl: https://app.ledgeriq.com/oauth/authorize
+          tokenUrl: https://api.ledgeriq.com/oauth/token
+          scopes:
+            read:metrics:      Read computed metrics and figures
+            read:transactions: Read transactions and entities
+            read:forecasts:    Read cash forecasts and risks
+            read:reports:      Read generated reports
+            read:alerts:       Read alerts
+            read:scenarios:    Read saved scenarios
+            write:scenarios:   Create and modify scenarios
+            write:annotations: Write categories and memos
+
+  parameters:
+    OrgHeader:
+      name: X-LedgerIQ-Org
+      in: header
+      description: |
+        Target organization. Required for firm-scoped keys, which must name exactly one org per
+        request. Optional for single-org keys.
+      schema: { type: string, format: uuid }
+    IdPath:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    Limit:
+      name: limit
+      in: query
+      schema: { type: integer, default: 50, maximum: 200, minimum: 1 }
+    Cursor:
+      name: cursor
+      in: query
+      description: Opaque cursor from `next_cursor`. Offset pagination is not supported.
+      schema: { type: string }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: Client-generated unique key. Replaying a key returns the original response.
+      schema: { type: string, maxLength: 255 }
+
+  responses:
+    Unauthorized:
+      description: Missing or invalid credentials
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: Resource not found, or not visible to this tenant scope
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    RateLimited:
+      description: Rate limit exceeded
+      headers:
+        Retry-After:
+          schema: { type: integer }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    InsufficientData:
+      description: |
+        The requested computation cannot be performed honestly with the data available. This is a
+        first-class outcome, not an edge case — returning zero or null here would be worse.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example:
+            error:
+              code: insufficient_data
+              message: "Customer profitability requires job-costing data, which isn't present in this org's books."
+              details:
+                required_sources: [accounting]
+                missing_fields: ["invoice_lines.project_ref"]
+              request_id: req_01J8XYZ
+
+  schemas:
+    Money:
+      type: object
+      description: Never a bare number. Decimal string to survive JSON float parsing.
+      required: [amount, currency]
+      properties:
+        amount:      { type: string, example: "14200.0000" }
+        currency:    { type: string, minLength: 3, maxLength: 3, example: USD }
+        minor_units: { type: integer, example: 1420000 }
+
+    Period:
+      type: object
+      required: [start, end, grain]
+      properties:
+        start: { type: string, format: date }
+        end:   { type: string, format: date }
+        grain: { type: string, enum: [day, week, month, quarter, year, trailing_12, custom] }
+
+    DataFreshness:
+      type: object
+      description: Last successful sync per connected source type. Rendered on every product surface.
+      additionalProperties: { type: string, format: date-time }
+      example:
+        accounting: "2026-07-27T04:00:00Z"
+        banking:    "2026-07-27T05:45:00Z"
+        payments:   "2026-07-27T05:50:00Z"
+
+    Provenance:
+      type: object
+      required: [metric_key, engine_version, computed_at]
+      properties:
+        metric_key:      { type: string }
+        engine_version:  { type: string, example: "2026.07.1" }
+        computed_at:     { type: string, format: date-time }
+        drill_down_url:  { type: string }
+        source_record_count: { type: integer }
+        data_freshness:  { $ref: '#/components/schemas/DataFreshness' }
+
+    Figure:
+      type: object
+      description: A computed value with everything needed to trust and verify it.
+      required: [key, value, unit, provenance]
+      properties:
+        key:        { type: string, example: runway_months }
+        label:      { type: string, example: "Runway" }
+        value:      { type: string, example: "7.2" }
+        unit:       { type: string, enum: [currency, ratio, percent, months, days, count] }
+        money:      { $ref: '#/components/schemas/Money' }
+        period:     { $ref: '#/components/schemas/Period' }
+        confidence: { type: string, enum: [high, medium, low, insufficient_data] }
+        provenance: { $ref: '#/components/schemas/Provenance' }
+
+    Comparison:
+      type: object
+      properties:
+        prior:        { $ref: '#/components/schemas/Figure' }
+        change:       { type: string, example: "-0.041" }
+        change_pct:   { type: number, example: -8.7 }
+        direction:    { type: string, enum: [up, down, flat] }
+        is_favorable:
+          type: boolean
+          description: >-
+            Direction is not the same as good. Margin moving down is unfavorable; expenses moving
+            down is favorable. Clients should colour on this field, never on `direction`.
+
+    Driver:
+      type: object
+      description: One ranked contributor to a metric's change.
+      properties:
+        label:         { type: string, example: "Subcontractor cost — Vertex account" }
+        contribution:  { $ref: '#/components/schemas/Money' }
+        contribution_pct_of_change: { type: number, example: 62.4 }
+        category_id:   { type: string, format: uuid }
+        customer_id:   { type: string, format: uuid }
+        drill_down_url: { type: string }
+
+    MetricAvailability:
+      type: object
+      properties:
+        key:          { type: string }
+        label:        { type: string }
+        unit:         { type: string }
+        availability: { type: string, enum: [available, insufficient_data, requires_connection] }
+        reason:       { type: string, example: "MRR requires subscription revenue; this org is classified as services." }
+        required_sources:
+          type: array
+          items: { type: string }
+
+    MetricUnavailable:
+      type: object
+      properties:
+        key:    { type: string }
+        error:  { type: string, enum: [insufficient_data, requires_connection, unknown_metric] }
+        reason: { type: string }
+
+    ForecastPoint:
+      type: object
+      properties:
+        date:         { type: string, format: date }
+        p10:          { $ref: '#/components/schemas/Money' }
+        p50:          { $ref: '#/components/schemas/Money' }
+        p90:          { $ref: '#/components/schemas/Money' }
+        committed:    { $ref: '#/components/schemas/Money' }
+        receivables:  { $ref: '#/components/schemas/Money' }
+        variable:     { $ref: '#/components/schemas/Money' }
+        new_revenue:  { $ref: '#/components/schemas/Money' }
+
+    RiskEvent:
+      type: object
+      properties:
+        id:       { type: string, format: uuid }
+        kind:
+          type: string
+          enum: [payroll_shortfall, cash_shortfall, tax_obligation, large_expense_due,
+                 customer_concentration_gap, runway_threshold]
+        severity: { type: string, enum: [critical, high, medium, info] }
+        date:     { type: string, format: date }
+        shortfall: { $ref: '#/components/schemas/Money' }
+        headline: { type: string, example: "Nov 15 payroll is $14,200 short at the P50 projection." }
+        drivers:
+          type: array
+          items: { $ref: '#/components/schemas/Driver' }
+        recommended_actions:
+          type: array
+          items:
+            type: object
+            properties:
+              text:            { type: string }
+              type:            { type: string, enum: [collect, defer, reduce, finance, defer_decision] }
+              estimated_impact: { $ref: '#/components/schemas/Money' }
+
+    Forecast:
+      type: object
+      properties:
+        id:             { type: string, format: uuid }
+        generated_at:   { type: string, format: date-time }
+        horizon_days:   { type: integer }
+        method_version: { type: string }
+        confidence:     { type: string, enum: [high, medium, low, insufficient_data] }
+        history_days:   { type: integer, description: Data depth at generation; drives band width }
+        points:
+          type: array
+          items: { $ref: '#/components/schemas/ForecastPoint' }
+        risk_events:
+          type: array
+          items: { $ref: '#/components/schemas/RiskEvent' }
+        assumptions:
+          type: array
+          items: { $ref: '#/components/schemas/Assumption' }
+        freshness: { $ref: '#/components/schemas/DataFreshness' }
+
+    Assumption:
+      type: object
+      description: Assumptions are first-class and editable. The intended interaction is the user arguing with them.
+      properties:
+        key:         { type: string, example: burden_multiplier }
+        label:       { type: string, example: "Fully-loaded cost multiplier" }
+        value:       { type: string, example: "1.30" }
+        description: { type: string }
+        editable:    { type: boolean }
+        source:      { type: string, enum: [engine_default, org_history, industry_prior, user_override] }
+
+    Answer:
+      type: object
+      description: |
+        The answer contract. Note the absence of a free-prose field containing authoritative
+        numbers: `why` is narrative, but every figure it references is present structurally in
+        `figures`, so a client can re-render without parsing English.
+      required: [trace_id, headline, figures, why, assumptions, confidence]
+      properties:
+        trace_id: { type: string }
+        headline: { type: string, description: The direct answer, one sentence, plain language }
+        figures:
+          type: array
+          items: { $ref: '#/components/schemas/Figure' }
+        why:      { type: string, description: Causal explanation, 2-4 sentences }
+        assumptions:
+          type: array
+          items: { $ref: '#/components/schemas/Assumption' }
+        confidence:
+          type: object
+          properties:
+            level:  { type: string, enum: [high, medium, low, insufficient_data] }
+            reason: { type: string }
+        recommended_action:
+          type: object
+          properties:
+            text: { type: string }
+            type: { type: string }
+            deep_link: { type: string }
+        follow_up_questions:
+          type: array
+          items: { type: string }
+        data_freshness: { $ref: '#/components/schemas/DataFreshness' }
+        trace_url: { type: string }
+
+    AnswerTrace:
+      type: object
+      description: Full reasoning record — audit, dispute resolution, and evaluation replay.
+      properties:
+        classification: { type: object, additionalProperties: true }
+        plan:           { type: object, additionalProperties: true }
+        executed_results:
+          type: array
+          items: { $ref: '#/components/schemas/Figure' }
+        verifier:
+          type: object
+          properties:
+            grounding_violations: { type: integer }
+            contract_valid:       { type: boolean }
+            claim_checks_passed:  { type: boolean }
+        prompt_version: { type: string }
+        engine_version: { type: string }
+        latency_ms:     { type: integer }
+
+    Scenario:
+      type: object
+      properties:
+        id:      { type: string, format: uuid }
+        name:    { type: string }
+        kind:    { type: string }
+        inputs:  { type: object, additionalProperties: true }
+        assumptions:
+          type: array
+          items: { $ref: '#/components/schemas/Assumption' }
+        results:
+          type: object
+          properties:
+            cash_delta:      { $ref: '#/components/schemas/Money' }
+            runway_delta_months: { type: number }
+            profit_delta:    { $ref: '#/components/schemas/Money' }
+            health_score_delta: { type: integer }
+            break_even_month: { type: string, format: date }
+            largest_risk:    { type: string }
+        created_at: { type: string, format: date-time }
+
+    Transaction:
+      type: object
+      properties:
+        id:          { type: string, format: uuid }
+        direction:   { type: string, enum: [inflow, outflow] }
+        amount:      { $ref: '#/components/schemas/Money' }
+        occurred_at: { type: string, format: date, description: Economic timing (accrual) }
+        posted_at:   { type: string, format: date, description: Cash timing (bank settlement) }
+        description: { type: string }
+        merchant_name: { type: string }
+        category:
+          type: object
+          properties:
+            id:         { type: string, format: uuid }
+            name:       { type: string }
+            source:     { type: string, enum: [user_rule, source_system, classifier, llm, default] }
+            confidence: { type: number }
+            locked:     { type: boolean }
+        customer_id: { type: string, format: uuid }
+        vendor_id:   { type: string, format: uuid }
+        is_transfer: { type: boolean }
+        is_recurring: { type: boolean }
+        lineage:
+          type: object
+          properties:
+            source:            { type: string }
+            source_txn_id:     { type: string }
+            transform_version: { type: string }
+            ingested_at:       { type: string, format: date-time }
+
+    Customer:
+      type: object
+      properties:
+        id:               { type: string, format: uuid }
+        name:             { type: string }
+        lifetime_revenue: { $ref: '#/components/schemas/Money' }
+        revenue_share_pct: { type: number, description: Concentration risk input }
+        payment_behavior:
+          type: object
+          description: Fitted payment-lag distribution, not the stated terms.
+          properties:
+            mean_days_late: { type: number, example: 22.4 }
+            p50_days_late:  { type: number }
+            p90_days_late:  { type: number }
+            sample_count:   { type: integer }
+            fitted_at:      { type: string, format: date-time }
+        is_active: { type: boolean }
+
+    Invoice:
+      type: object
+      properties:
+        id:          { type: string, format: uuid }
+        number:      { type: string }
+        customer_id: { type: string, format: uuid }
+        status:      { type: string, enum: [draft, open, partial, paid, overdue, void, written_off] }
+        issued_on:   { type: string, format: date }
+        due_date:    { type: string, format: date }
+        total:       { $ref: '#/components/schemas/Money' }
+        balance:     { $ref: '#/components/schemas/Money' }
+        expected_payment_date: { type: string, format: date, description: From customer behavior, not terms }
+        payment_probability:   { type: number, example: 0.87 }
+        days_overdue: { type: integer }
+
+    Alert:
+      type: object
+      properties:
+        id:       { type: string, format: uuid }
+        rule_key: { type: string }
+        severity: { type: string, enum: [critical, high, medium, info] }
+        state:    { type: string, enum: [pending, sent, acknowledged, dismissed, resolved, suppressed] }
+        title:    { type: string }
+        body:     { type: string }
+        figures:
+          type: array
+          items: { $ref: '#/components/schemas/Figure' }
+        recommended_action:
+          type: object
+          properties:
+            text: { type: string }
+            type: { type: string }
+        triggered_at: { type: string, format: date-time }
+
+    Report:
+      type: object
+      properties:
+        id:           { type: string, format: uuid }
+        kind:         { type: string }
+        period_start: { type: string, format: date }
+        period_end:   { type: string, format: date }
+        status:       { type: string, enum: [generating, ready, failed] }
+        content:      { type: object, additionalProperties: true }
+        pdf_url:      { type: string }
+        generated_at: { type: string, format: date-time }
+
+    Connection:
+      type: object
+      properties:
+        id:      { type: string, format: uuid }
+        source:  { type: string }
+        kind:    { type: string, enum: [accounting, banking, payments, payroll, commerce, crm, spend] }
+        display_name: { type: string }
+        status:
+          type: string
+          enum: [active, degraded, reauth_required, error, disconnected]
+          description: Product-visible, not internal. The UI renders this state directly.
+        status_detail: { type: string }
+        last_successful_sync_at: { type: string, format: date-time }
+        backfill_completed_at:   { type: string, format: date-time }
+
+    CursorPage:
+      type: object
+      properties:
+        next_cursor: { type: string, nullable: true }
+        has_more:    { type: boolean }
+
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              enum: [unauthorized, forbidden, not_found, validation_error, insufficient_data,
+                     requires_connection, rate_limited, conflict, internal_error,
+                     question_out_of_scope, data_stale]
+            message:    { type: string }
+            details:    { type: object, additionalProperties: true }
+            request_id: { type: string }
