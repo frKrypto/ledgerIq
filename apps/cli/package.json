@@ -1,0 +1,13 @@
+{
+  "name": "@ledgeriq/cli",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "bin": { "ledgeriq": "./src/index.ts" },
+  "dependencies": {
+    "@ledgeriq/connectors": "*",
+    "@ledgeriq/core": "*",
+    "@ledgeriq/crypto": "*",
+    "@ledgeriq/db": "*"
+  }
+}

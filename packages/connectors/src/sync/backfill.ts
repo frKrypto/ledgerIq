@@ -142,6 +142,13 @@ export class BackfillRunner {
   ): Promise<{ records: number; pages: number; complete: boolean }> {
     let recordsSeen = existing?.recordsSeen ?? 0;
     let pages = 0;
+    // The furthest cursor durably checkpointed during THIS run. Without this the
+    // failure path below writes back `existing.cursor` — the cursor from before
+    // the run started — silently discarding every page already archived. That
+    // does not cause gaps (the re-fetch dedupes), but it throws away real
+    // progress and re-burns rate limit, which on a 24-month backfill of a large
+    // company is the difference between resuming and effectively restarting.
+    let latestCursor: Record<string, unknown> = existing?.cursor ?? {};
 
     const iterator = this.adapter.fullSync(connection, recordType, {
       since,
@@ -185,6 +192,7 @@ export class BackfillRunner {
         await options.afterPage?.(batch);
 
         // ── Step 3: only now is it safe to advance ────────────────────────────
+        latestCursor = batch.cursor;
         await this.checkpoints.save(connection.id, recordType, {
           cursor: batch.cursor,
           recordsSeen,
@@ -206,7 +214,8 @@ export class BackfillRunner {
       // Persist the failure so the next attempt resumes rather than restarts, and
       // so repeated failures are visible instead of appearing as a stalled sync.
       await this.checkpoints.save(connection.id, recordType, {
-        cursor: existing?.cursor ?? {},
+        // The furthest point actually reached, not where the run began.
+        cursor: latestCursor,
         recordsSeen,
         phase: 'backfill',
         lastError: (err as Error).message,

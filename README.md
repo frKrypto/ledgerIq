@@ -105,10 +105,21 @@ tested; there is no user-facing product yet and won't be until roughly sprint 7 
 | QuickBooks adapter: OAuth, rotating refresh tokens, paginated sync | `packages/connectors/src/quickbooks/` |
 | **Resumable backfill — archive-then-checkpoint ordering** | `packages/connectors/src/sync/backfill.ts` |
 | Credential vault proving a database dump yields no usable tokens | `packages/db/src/repositories/credentials.ts` |
+| **Postgres-backed checkpoints** — resumption survives a process restart | `packages/db/src/repositories/sync-state.ts` |
+| **Operator CLI** — connect, sync, status, inspect | `apps/cli/` |
 
 ```bash
 npm install && docker compose up -d postgres
-npm run db:migrate && npm test        # 97 tests
+npm run db:migrate && npm test        # 102 tests
+```
+
+Once you have Intuit sandbox credentials (free, ~15 min), the full pipeline runs
+against real books — see **[local-quickbooks.md](docs/03-engineering/local-quickbooks.md)**:
+
+```bash
+npm run cli -- connect
+npm run cli -- sync --connection <id>
+npm run cli -- inspect --connection <id> --type Invoice --fields
 ```
 
 Verified, not assumed: the isolation suite was mutation-tested — removing `FORCE ROW LEVEL
@@ -122,3 +133,4 @@ with a timestamp, so hashing the whole payload made re-fetched pages look unique
 defeated deduplication on the retry path.
 
 **Next:** sprint 3 — normalization into the canonical model, and the chart-of-accounts mapping.
+Run a real sandbox backfill first; the `inspect --fields` output is the input to that design.

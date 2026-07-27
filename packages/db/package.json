@@ -16,6 +16,7 @@
     "@ledgeriq/core": "*",
     "drizzle-orm": "^0.38.2",
     "pg": "^8.13.1",
-    "@ledgeriq/crypto": "*"
+    "@ledgeriq/crypto": "*",
+    "@ledgeriq/connectors": "*"
   }
 }

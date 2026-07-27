@@ -18,7 +18,8 @@
     "test:watch": "vitest",
     "test:tenancy": "vitest run --project tenancy",
     "db:migrate": "node --import tsx packages/db/src/cli/migrate.ts",
-    "db:reset": "node --import tsx packages/db/src/cli/reset.ts"
+    "db:reset": "node --import tsx packages/db/src/cli/reset.ts",
+    "cli": "node --import tsx apps/cli/src/index.ts"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",

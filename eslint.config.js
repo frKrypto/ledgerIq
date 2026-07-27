@@ -91,7 +91,7 @@ export default tseslint.config(
 
   {
     // CLI entrypoints exist to print. Test files assert rather than return.
-    files: ['**/src/cli/**/*.ts'],
+    files: ['**/src/cli/**/*.ts', 'apps/cli/**/*.ts'],
     rules: { 'no-console': 'off' },
   },
 
