@@ -3,7 +3,7 @@
 **14 slides + appendix.** Target: 12–15 minutes, leaving 30 for discussion. Narrative and objection
 handling: [fundraising.md](fundraising.md).
 
-Design follows [brand-identity.md](brand-identity.md) — restrained, typographic, numbers-forward. No
+Design follows [brand-identity.md](../02-design/brand-identity.md) — restrained, typographic, numbers-forward. No
 stock photos, no gradient hero shapes, one idea per slide.
 
 ---

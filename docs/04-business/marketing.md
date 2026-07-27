@@ -136,7 +136,7 @@ itself a trust signal.
 
 ## 6. Brand marketing
 
-Restrained, consistent with [brand-identity.md](brand-identity.md): competent and calm, not clever.
+Restrained, consistent with [brand-identity.md](../02-design/brand-identity.md): competent and calm, not clever.
 
 **The founder voice is the primary brand channel early.** Building in public, sharing genuine
 insights from aggregate data ("here's what 500 small businesses' cash cycles actually look like"),
