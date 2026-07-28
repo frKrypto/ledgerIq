@@ -377,6 +377,32 @@ export const forecasts = pgTable('forecasts', {
   methodVersion: text('method_version').notNull(),
   confidence: text('confidence').notNull(),
   historyDays: integer('history_days'),
+  /** Re-run of today's engine over a past date. See 0007 for why it is separated. */
+  isBackfilled: boolean('is_backfilled').notNull().default(false),
+});
+
+/**
+ * What actually happened, against what we said would happen.
+ *
+ * See 0006_forecast_scores.sql for why this table ships before anything with a
+ * UI: the history cannot be reconstructed retroactively.
+ */
+export const forecastScores = pgTable('forecast_scores', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  orgId: uuid('org_id').notNull(),
+  forecastId: uuid('forecast_id').notNull(),
+  horizonDays: integer('horizon_days').notNull(),
+  targetDate: date('target_date').notNull(),
+  predictedP50: numeric('predicted_p50').notNull(),
+  predictedP10: numeric('predicted_p10').notNull(),
+  predictedP90: numeric('predicted_p90').notNull(),
+  actual: numeric('actual').notNull(),
+  signedError: numeric('signed_error').notNull(),
+  absPctError: numeric('abs_pct_error').notNull(),
+  withinBand: boolean('within_band').notNull(),
+  methodVersion: text('method_version').notNull(),
+  isBackfilled: boolean('is_backfilled').notNull().default(false),
+  scoredAt: timestamp('scored_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
 /**
@@ -406,6 +432,7 @@ export const TENANT_SCOPED_TABLES = [
   'balances',
   'metric_snapshots',
   'forecasts',
+  'forecast_scores',
 ] as const;
 
 /**

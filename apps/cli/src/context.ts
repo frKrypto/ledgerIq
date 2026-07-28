@@ -50,6 +50,27 @@ export interface CliConfig {
   };
 }
 
+/**
+ * A KMS that refuses rather than pretends.
+ *
+ * Returned when a command declared it does not need keys. If one ever does reach
+ * for a key, it fails loudly here instead of quietly deriving something from a
+ * default — a wrong key that "works" is how credentials become unreadable later.
+ */
+function withheldKms(): KmsProvider {
+  const refuse = (): never => {
+    throw new ConfigError(
+      'This command was loaded without KMS access but tried to use a key.\n' +
+        'Pass requireKms to loadConfig() in the command that needs it.',
+    );
+  };
+  return {
+    get keyId(): string { return refuse(); },
+    wrap: () => Promise.reject(new ConfigError('KMS not loaded for this command')),
+    unwrap: () => Promise.reject(new ConfigError('KMS not loaded for this command')),
+  };
+}
+
 export class ConfigError extends Error {
   constructor(message: string) {
     super(message);
@@ -69,7 +90,9 @@ function required(name: string, hint: string): string {
 
 export const DEFAULT_ARCHIVE_DIR = join(homedir(), '.ledgeriq', 'archive');
 
-export async function loadConfig(opts: { requireQuickBooks?: boolean } = {}): Promise<CliConfig> {
+export async function loadConfig(
+  opts: { requireQuickBooks?: boolean; requireKms?: boolean } = {},
+): Promise<CliConfig> {
   const pool = createPool({
     connectionString: connectionStringFromEnv(),
     applicationName: 'ledgeriq-cli',
@@ -81,17 +104,28 @@ export async function loadConfig(opts: { requireQuickBooks?: boolean } = {}): Pr
   // write rows that the application itself could never read back.
   await assertRoleCannotBypassRls(pool);
 
+  // Commands that never touch stored credentials do not need a key.
+  //
+  // This is not just convenience. The forecast job is meant to run unattended
+  // every night, and demanding a KMS passphrase to compute arithmetic over rows
+  // already in the database is the kind of friction that ends with the job not
+  // being scheduled at all — which, for the accuracy series, is unrecoverable.
+  // Withheld rather than faked: any command that does reach for a key without
+  // asking for one gets a clear error instead of a silently wrong cipher.
   const kmsKeyId = process.env['KMS_KEY_ID'];
-  const kms: KmsProvider = kmsKeyId
-    ? new AwsKms(kmsKeyId)
-    : new LocalKms(
-        required(
-          'LOCAL_KMS_ROOT_KEY',
-          'Local development uses an in-process KMS. Set LOCAL_KMS_ROOT_KEY to any\n' +
-            'passphrase — it derives the root key that wraps each tenant data key.\n' +
-            'Changing it makes previously stored credentials unreadable.',
-        ),
-      );
+  const kms: KmsProvider =
+    opts.requireKms === false
+      ? withheldKms()
+      : kmsKeyId
+        ? new AwsKms(kmsKeyId)
+        : new LocalKms(
+            required(
+              'LOCAL_KMS_ROOT_KEY',
+              'Local development uses an in-process KMS. Set LOCAL_KMS_ROOT_KEY to any\n' +
+                'passphrase — it derives the root key that wraps each tenant data key.\n' +
+                'Changing it makes previously stored credentials unreadable.',
+            ),
+          );
 
   const bucket = process.env['ARCHIVE_S3_BUCKET'];
   const archive: RawPayloadArchive = bucket

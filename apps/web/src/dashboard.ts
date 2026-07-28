@@ -1,5 +1,5 @@
 import type { Pool } from 'pg';
-import { createPool, connectionStringFromEnv } from '@ledgeriq/db';
+import { createPool, connectionStringFromEnv, forecastsRepo } from '@ledgeriq/db';
 import {
   arAging,
   buildCashForecast,
@@ -114,6 +114,24 @@ export async function buildDashboard(
     decomposeExpenseChange({ pool, orgId, period: last30 }, prior30),
     buildCashForecast(pool, orgId, { asOf }),
   ]);
+
+  // Every forecast a user is shown gets written down, deduped to one per day.
+  //
+  // Recording at render rather than from a scheduler is a deliberate tradeoff:
+  // it means the accuracy series starts accumulating the moment anyone opens the
+  // product, with no cron to forget to deploy. The history cannot be
+  // reconstructed later, so starting it beats starting it correctly.
+  //
+  // Never fatal: a failure to record must not blank the page a user is looking at.
+  try {
+    await forecastsRepo.saveForecastDaily(
+      pool,
+      { orgId, actor: { type: 'system', jobName: 'dashboard' } },
+      forecast,
+    );
+  } catch (err) {
+    console.error('[forecast] failed to record forecast for accuracy scoring:', err);
+  }
 
   // Revenue concentration — the top customer's share. A genuine risk signal for
   // an agency, and computed rather than asserted.

@@ -1,4 +1,5 @@
 import type { Pool } from 'pg';
+import { loadCalibration, bandAt } from './calibration.js';
 import * as Money from '@ledgeriq/core/money';
 
 /**
@@ -25,7 +26,10 @@ import * as Money from '@ledgeriq/core/money';
  * broken, and impossible to debug when a customer disputes a number.
  */
 
-export const FORECAST_VERSION = '2026.07.1';
+// Bumped when the engine's output changes in a way that makes earlier accuracy
+// scores incomparable. 2026.07.2 replaces the invented P10-P90 constants with a
+// band calibrated from observed error — see calibration.ts.
+export const FORECAST_VERSION = '2026.07.2';
 
 export interface ForecastPoint {
   readonly date: string;
@@ -98,6 +102,10 @@ export async function buildCashForecast(
   const asOf = opts.asOf ?? new Date();
   const horizonDays = opts.horizonDays ?? 91;
   const asOfKey = dayKey(asOf);
+
+  // Where the band comes from. Null until this org has enough scored forecasts,
+  // in which case the heuristic below is used and the assumption row says so.
+  const calibration = await loadCalibration(pool, orgId);
 
   // ── Starting position: settled cash only ─────────────────────────────────
   const cashRows = await scoped<{ net: string }>(
@@ -282,16 +290,26 @@ export async function buildCashForecast(
     variableCumulative -= dailyVariable;
     balance += dayDelta;
 
-    // Uncertainty widens with horizon — sqrt(t), the standard diffusion shape.
-    // A constant band would understate far-dated risk and overstate near-dated
-    // certainty, which is exactly backwards for a payroll warning.
-    const spread = Math.round(Math.sqrt(i) * Math.abs(dailyVariable) * 2.6 + i * 180_00);
+    // The band, measured where possible and guessed where not.
+    //
+    // The fallback keeps the sqrt(t) diffusion shape — uncertainty genuinely does
+    // widen with horizon, and a flat band would understate far-dated risk while
+    // overstating near-dated certainty, which is backwards for a payroll warning.
+    // But its constants are invented, and the first accuracy run showed them
+    // producing 0% band coverage. Once scores exist, empirical quantiles replace
+    // them entirely.
+    const band = calibration
+      ? bandAt(calibration, i, balance)
+      : (() => {
+          const spread = Math.round(Math.sqrt(i) * Math.abs(dailyVariable) * 2.6 + i * 180_00);
+          return { p10: balance - spread, p90: balance + Math.round(spread * 0.85) };
+        })();
 
     points.push({
       date: key,
       p50: balance,
-      p10: balance - spread,
-      p90: balance + Math.round(spread * 0.85),
+      p10: band.p10,
+      p90: band.p90,
       committed: committedCumulative,
       receivables: receivablesCumulative,
       variable: variableCumulative,
@@ -301,6 +319,19 @@ export async function buildCashForecast(
   const riskEvents = detectRisks(points, projectedPayroll, receivables, asOf, startingCash);
 
   const assumptions: Assumption[] = [
+    {
+      key: 'band_calibration',
+      label: 'Confidence band',
+      value: calibration
+        ? `measured (${calibration.totalScores} scored${calibration.backfilledOnly ? ', backfilled' : ''})`
+        : 'engine default (uncalibrated)',
+      description: calibration
+        ? 'The P10-P90 range is the 10th-90th percentile of where actuals have historically ' +
+          'landed relative to this engine’s midpoint, not an assumed spread.'
+        : 'Not enough scored forecasts yet to measure this range, so it uses a default shape. ' +
+          'Treat its width as indicative, not as a tested confidence interval.',
+      source: calibration ? 'org_history' : 'engine_default',
+    },
     {
       key: 'ar_timing_from_history',
       label: 'Receivable timing',

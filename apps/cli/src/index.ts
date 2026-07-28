@@ -11,6 +11,7 @@ import { connect } from './commands/connect.js';
 import { sync } from './commands/sync.js';
 import { status, inspect } from './commands/status.js';
 import { demo } from './commands/demo.js';
+import { forecastRecord, forecastScore, forecastAccuracy, forecastBackfill } from './commands/forecast.js';
 
 const USAGE = `
 ${fmt.bold('ledgeriq')} — operator CLI
@@ -31,6 +32,16 @@ ${fmt.bold('ledgeriq')} — operator CLI
   ${fmt.cyan('inspect')} --connection <id> --type Invoice [--limit 3] [--fields]
       Dump archived records. --fields shows field coverage across real data,
       which is the input to normalization design.
+
+  ${fmt.cyan('forecast')} <record|score|accuracy> [--org <name>]
+      record    generate and store today's forecast (idempotent per day)
+      backfill  re-run the engine over past dates for a baseline today
+                  [--days 365] [--every 7]
+      score     score forecasts whose horizons have come due
+      accuracy  median error, band coverage, and bias per horizon
+
+      This is the nightly job. Forecast history cannot be rebuilt after the
+      fact, so run it even before there is a scheduler.
 
 ${fmt.dim('Setup: docs/03-engineering/local-quickbooks.md')}
 `;
@@ -72,6 +83,27 @@ async function main(): Promise<void> {
         ...(types !== undefined ? { recordTypes: types.split(',') } : {}),
         ...(months !== undefined ? { months: Number(months) } : {}),
       });
+      break;
+    }
+    case 'forecast': {
+      const [sub] = argv;
+      const org = flag(argv, 'org');
+      const opts = org !== undefined ? { orgName: org } : {};
+      if (sub === 'record') await forecastRecord(opts);
+      else if (sub === 'backfill') {
+        const days = flag(argv, 'days');
+        const every = flag(argv, 'every');
+        await forecastBackfill({
+          ...opts,
+          ...(days !== undefined ? { days: Number(days) } : {}),
+          ...(every !== undefined ? { every: Number(every) } : {}),
+        });
+      }
+      else if (sub === 'score') await forecastScore(opts);
+      else if (sub === 'accuracy') await forecastAccuracy(opts);
+      else throw new ConfigError(
+        'forecast requires a subcommand: record, backfill, score, or accuracy',
+      );
       break;
     }
     case 'status': {
