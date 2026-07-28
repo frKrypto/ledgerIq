@@ -23,6 +23,9 @@
       "path": "packages/reconcile"
     },
     {
+      "path": "packages/alerts"
+    },
+    {
       "path": "packages/db"
     },
     {

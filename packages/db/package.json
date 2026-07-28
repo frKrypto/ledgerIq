@@ -20,6 +20,7 @@
     "@ledgeriq/connectors": "*",
     "@ledgeriq/normalize": "*",
     "@ledgeriq/reconcile": "*",
-    "@ledgeriq/seed": "*"
+    "@ledgeriq/seed": "*",
+    "@ledgeriq/alerts": "*"
   }
 }

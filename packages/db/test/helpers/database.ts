@@ -90,6 +90,17 @@ export async function setupTestDatabase(): Promise<TestDatabase> {
     adminPool,
     appPool,
     close: async () => {
+      // DROP DATABASE ... WITH (FORCE) terminates any backend still attached and
+      // pg raises 57P01 on it. That is the teardown working, not a failure — but
+      // an unhandled 'error' event makes vitest report it as a suite error, and a
+      // suite that cries wolf on every run gets its output skimmed. Swallow only
+      // the shutdown codes; anything else still surfaces.
+      const ignoreShutdown = (err: Error & { code?: string }): void => {
+        if (err.code !== '57P01' && err.code !== '57P02' && err.code !== '57P03') throw err;
+      };
+      appPool.on('error', ignoreShutdown);
+      adminPool.on('error', ignoreShutdown);
+
       await appPool.end();
       await adminPool.end();
 

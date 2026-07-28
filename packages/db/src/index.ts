@@ -7,3 +7,4 @@ export * as credentialsRepo from './repositories/credentials.js';
 export * as syncStateRepo from './repositories/sync-state.js';
 export * as canonicalRepo from './repositories/canonical.js';
 export * as forecastsRepo from './repositories/forecasts.js';
+export * as alertsRepo from './repositories/alerts.js';

@@ -4,7 +4,7 @@ export default defineWorkspace([
   {
     test: {
       name: 'unit',
-      include: ['packages/core/test/**/*.test.ts', 'packages/crypto/test/**/*.test.ts', 'packages/connectors/test/**/*.test.ts'],
+      include: ['packages/core/test/**/*.test.ts', 'packages/crypto/test/**/*.test.ts', 'packages/connectors/test/**/*.test.ts', 'packages/alerts/test/**/*.test.ts'],
       environment: 'node',
     },
   },

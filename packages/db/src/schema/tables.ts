@@ -435,6 +435,9 @@ export const TENANT_SCOPED_TABLES = [
   'metric_snapshots',
   'forecasts',
   'forecast_scores',
+  'alerts',
+  'alert_observations',
+  'weekly_briefs',
 ] as const;
 
 /**
