@@ -105,6 +105,11 @@ source transactions behind it.
 To point it at real books instead, see
 [local-quickbooks.md](docs/03-engineering/local-quickbooks.md).
 
+**To show someone who can't run it,** `npm run export` freezes the dashboard into one
+self-contained HTML file — no server, no network, opens straight off disk. A current one is
+committed at [demo/ledgeriq-dashboard-snapshot.html](demo/ledgeriq-dashboard-snapshot.html). It is
+a snapshot, not a live app, and the page says so on its face.
+
 | Delivered | Where |
 |---|---|
 | Monorepo, TypeScript strict, CI pipeline | `package.json`, `.github/workflows/ci.yml` |
@@ -126,6 +131,7 @@ To point it at real books instead, see
 | **Metric engine** — provenance on every figure, `insufficient_data` over zero | `packages/metrics/src/engine.ts` |
 | **13-week cash forecast** — four streams, per-customer payment lag, named risks | `packages/metrics/src/forecast.ts` |
 | **Web dashboard** with drill-down to source transactions | `apps/web/` |
+| **Static export** — the whole dashboard frozen into one shareable file | `apps/web/src/export.ts` |
 
 ```bash
 npm install && docker compose up -d postgres

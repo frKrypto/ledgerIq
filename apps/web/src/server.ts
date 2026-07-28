@@ -3,25 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createPool, connectionStringFromEnv, assertRoleCannotBypassRls } from '@ledgeriq/db';
-import {
-  arAging,
-  buildCashForecast,
-  cashPosition,
-  decomposeExpenseChange,
-  expensesByCategory,
-  grossMargin,
-  monthlyBurn,
-  monthlySeries,
-  netProfit,
-  operatingExpenses,
-  revenue,
-  revenueByCustomer,
-  runway,
-  trailingMonths,
-  monthPeriod,
-  type MetricContext,
-  type Period,
-} from '@ledgeriq/metrics';
+import { buildDashboard, drilldown, resolveOrg } from './dashboard.js';
 
 /**
  * Demo web server.
@@ -49,91 +31,6 @@ const pool = createPool({
 // bypass row-level security.
 await assertRoleCannotBypassRls(pool);
 
-async function resolveOrg(name?: string): Promise<{ id: string; name: string } | null> {
-  const adminPool = createPool({
-    connectionString: process.env['ADMIN_DATABASE_URL'] ?? connectionStringFromEnv(),
-    applicationName: 'ledgeriq-web-admin',
-    maxConnections: 2,
-  });
-  try {
-    const { rows } = await adminPool.query<{ id: string; name: string }>(
-      name
-        ? `SELECT id, name FROM organizations WHERE name = $1 AND deleted_at IS NULL LIMIT 1`
-        : `SELECT id, name FROM organizations WHERE deleted_at IS NULL ORDER BY created_at DESC LIMIT 1`,
-      name ? [name] : [],
-    );
-    return rows[0] ?? null;
-  } finally {
-    await adminPool.end();
-  }
-}
-
-/** Everything the dashboard needs, in one round trip. */
-async function buildDashboard(orgId: string, orgName: string): Promise<unknown> {
-  const asOf = new Date();
-  const ttm = trailingMonths(asOf, 12);
-  const thisMonth = monthPeriod(asOf.getUTCFullYear(), asOf.getUTCMonth() + 1);
-  const priorMonth = monthPeriod(
-    asOf.getUTCMonth() === 0 ? asOf.getUTCFullYear() - 1 : asOf.getUTCFullYear(),
-    asOf.getUTCMonth() === 0 ? 12 : asOf.getUTCMonth(),
-  );
-
-  const ttmCtx: MetricContext = { pool, orgId, period: ttm };
-  const monthCtx: MetricContext = { pool, orgId, period: thisMonth };
-
-  // Rolling 30-day windows for the change comparison.
-  //
-  // Comparing month-to-date against a FULL prior month is not a comparison — on
-  // the 28th it makes every expense category look like it collapsed, and the
-  // first render of this page showed wages "down $63,633" purely because the
-  // month wasn't over. Equal-length windows are the only honest version.
-  const iso = (d: Date): string => d.toISOString().slice(0, 10);
-  const daysAgo = (n: number): Date => new Date(asOf.getTime() - n * 86400000);
-  const last30: Period = { start: iso(daysAgo(30)), end: iso(asOf), grain: 'custom' };
-  const prior30: Period = { start: iso(daysAgo(60)), end: iso(daysAgo(31)), grain: 'custom' };
-
-  const [
-    cash, run, ttmRevenue, ttmProfit, ttmOpex,
-    marginNow, marginPrior, series, byCategory, byCustomer, aging, burn,
-    drivers, forecast,
-  ] = await Promise.all([
-    cashPosition(ttmCtx),
-    runway(ttmCtx),
-    revenue(ttmCtx),
-    netProfit(ttmCtx),
-    operatingExpenses(ttmCtx),
-    grossMargin(monthCtx),
-    grossMargin({ pool, orgId, period: priorMonth }),
-    monthlySeries(ttmCtx, 24),
-    expensesByCategory(ttmCtx),
-    revenueByCustomer(ttmCtx),
-    arAging(ttmCtx),
-    monthlyBurn(ttmCtx),
-    decomposeExpenseChange({ pool, orgId, period: last30 }, prior30),
-    buildCashForecast(pool, orgId, { asOf }),
-  ]);
-
-  // Revenue concentration — the top customer's share. A genuine risk signal for
-  // an agency, and computed rather than asserted.
-  const topCustomer = byCustomer[0];
-
-  return {
-    org: { id: orgId, name: orgName },
-    asOf: asOf.toISOString(),
-    metrics: {
-      cash, runway: run, revenue: ttmRevenue, profit: ttmProfit,
-      opex: ttmOpex, margin: marginNow, marginPrior, burn,
-    },
-    series,
-    breakdowns: { byCategory, byCustomer, aging },
-    concentration: topCustomer
-      ? { customer: topCustomer.label, share: topCustomer.share }
-      : null,
-    drivers: drivers.slice(0, 6),
-    forecast,
-  };
-}
-
 const server = createServer((req, res) => {
   void (async () => {
     const url = new URL(req.url ?? '/', `http://localhost:${PORT}`);
@@ -146,46 +43,25 @@ const server = createServer((req, res) => {
           res.end(JSON.stringify({ error: 'No organization found. Run `npm run demo` first.' }));
           return;
         }
-        const data = await buildDashboard(org.id, org.name);
+        const data = await buildDashboard(pool, org);
         res.writeHead(200, { 'content-type': 'application/json' });
         res.end(JSON.stringify(data));
         return;
       }
 
-      // Drill-down: the transactions behind a figure. This is the interaction
-      // that makes a number trustworthy (prd.md principle 1) — every figure on
-      // the page resolves here.
       if (url.pathname === '/api/drilldown') {
         const org = await resolveOrg(url.searchParams.get('org') ?? undefined);
         if (!org) {
           res.writeHead(404, { 'content-type': 'application/json' }).end('{}');
           return;
         }
-        const statement = url.searchParams.get('statement');
-        const from = url.searchParams.get('from') ?? '1900-01-01';
-        const to = url.searchParams.get('to') ?? '2999-12-31';
-
-        const client = await pool.connect();
-        try {
-          await client.query('BEGIN');
-          await client.query('SELECT set_config($1,$2,true)', ['app.current_org_id', org.id]);
-          const { rows } = await client.query(
-            `SELECT t.occurred_at::text AS date, t.description, t.merchant_name,
-                    t.amount::text AS amount, t.direction,
-                    coalesce(c.name,'Uncategorized') AS category
-               FROM transactions t LEFT JOIN categories c ON c.id = t.category_id
-              WHERE t.occurred_at >= $1 AND t.occurred_at <= $2
-                ${statement ? 'AND t.statement = $3::statement_class' : ''}
-                AND t.is_canonical AND NOT t.is_transfer AND t.voided_at IS NULL
-              ORDER BY t.amount DESC LIMIT 100`,
-            statement ? [from, to, statement] : [from, to],
-          );
-          await client.query('COMMIT');
-          res.writeHead(200, { 'content-type': 'application/json' });
-          res.end(JSON.stringify({ rows }));
-        } finally {
-          client.release();
-        }
+        const rows = await drilldown(pool, org.id, {
+          statement: url.searchParams.get('statement'),
+          from: url.searchParams.get('from') ?? undefined,
+          to: url.searchParams.get('to') ?? undefined,
+        });
+        res.writeHead(200, { 'content-type': 'application/json' });
+        res.end(JSON.stringify({ rows }));
         return;
       }
 

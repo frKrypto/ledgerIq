@@ -69,7 +69,7 @@ export default tseslint.config(
       // tenant scope can exist. Narrow by construction: these lookups return
       // only an org id or name, never financial data.
       'apps/cli/**',
-      'apps/web/src/server.ts',
+      'apps/web/src/dashboard.ts',
     ],
     rules: {
       'no-restricted-syntax': [

@@ -21,7 +21,8 @@
     "db:reset": "node --import tsx packages/db/src/cli/reset.ts",
     "cli": "node --import tsx apps/cli/src/index.ts",
     "demo": "node --import tsx apps/cli/src/index.ts demo",
-    "web": "node --import tsx apps/web/src/server.ts"
+    "web": "node --import tsx apps/web/src/server.ts",
+    "export": "node --import tsx apps/web/src/export.ts"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",

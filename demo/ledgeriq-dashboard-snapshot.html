@@ -1,0 +1,509 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LedgerIQ</title>
+<style>
+/* Design tokens: the validated set from docs/02-design/design-system.md §2.
+   Every categorical and status colour passed CVD-separation and contrast checks
+   in both light and dark modes. */
+:root{color-scheme:light;
+--surface-page:#f6f6f4;--surface-1:#fbfbfa;--surface-2:#f0f0ed;
+--border-subtle:#e3e3df;--border-strong:#c9c9c3;
+--text-primary:#111417;--text-secondary:#4e5459;--text-muted:#767c82;
+--brand:#0f8a6a;--brand-hover:#0b6b53;--brand-subtle:#e7f5ef;
+--s1:#0f8a6a;--s2:#2a78d6;--s3:#eb6834;--s4:#4a3aa7;
+--positive:#0e7c5a;--caution:#9a6100;--serious:#b4480f;--critical:#c2312f;--critical-subtle:#fdeceb;
+--font-ui:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+--font-reading:"Source Serif 4","Iowan Old Style",Georgia,serif;--r:10px;--rc:6px}
+@media(prefers-color-scheme:dark){:root:where(:not([data-theme=light])){color-scheme:dark;
+--surface-page:#0b0e11;--surface-1:#111417;--surface-2:#181c20;
+--border-subtle:#232830;--border-strong:#333a44;
+--text-primary:#f4f5f3;--text-secondary:#a8b0b8;--text-muted:#6f777f;
+--brand:#14a37d;--brand-hover:#34b489;--brand-subtle:#0d2a22;
+--s1:#14a37d;--s2:#3987e5;--s3:#d95926;--s4:#9085e9;
+--positive:#3fbf94;--caution:#e0a63c;--serious:#f08a4b;--critical:#f2706e;--critical-subtle:#2a1416}}
+:root[data-theme=dark]{color-scheme:dark;
+--surface-page:#0b0e11;--surface-1:#111417;--surface-2:#181c20;
+--border-subtle:#232830;--border-strong:#333a44;
+--text-primary:#f4f5f3;--text-secondary:#a8b0b8;--text-muted:#6f777f;
+--brand:#14a37d;--brand-hover:#34b489;--brand-subtle:#0d2a22;
+--s1:#14a37d;--s2:#3987e5;--s3:#d95926;--s4:#9085e9;
+--positive:#3fbf94;--caution:#e0a63c;--serious:#f08a4b;--critical:#f2706e;--critical-subtle:#2a1416}
+
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-ui);background:var(--surface-page);color:var(--text-primary);
+font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased}
+.num{font-variant-numeric:tabular-nums}
+.shell{display:grid;grid-template-columns:220px 1fr;min-height:100vh;
+background:linear-gradient(to right,var(--surface-1) 0 220px,var(--surface-page) 220px)}
+.nav{border-right:1px solid var(--border-subtle);padding:20px 12px;position:sticky;top:0;height:100vh}
+.logo{display:flex;align-items:center;gap:9px;padding:4px 10px 22px;font-weight:600;font-size:17px;letter-spacing:-.02em}
+.logo .iq{color:var(--brand)}
+.nav a{display:flex;gap:10px;padding:7px 10px;border-radius:var(--rc);color:var(--text-secondary);
+text-decoration:none;font-size:14px;font-weight:500}
+.nav a.on{background:var(--brand-subtle);color:var(--brand)}
+.nav a:hover:not(.on){background:var(--surface-2)}
+.topbar{height:56px;border-bottom:1px solid var(--border-subtle);background:var(--surface-1);
+display:flex;align-items:center;gap:16px;padding:0 24px;position:sticky;top:0;z-index:10}
+.org{font-weight:600;font-size:14px}.sp{flex:1}
+.fresh{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--text-secondary);
+background:var(--surface-2);padding:5px 11px;border-radius:100px;border:1px solid var(--border-subtle)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--positive)}
+.iconbtn{width:32px;height:32px;border-radius:var(--rc);border:1px solid var(--border-subtle);
+background:var(--surface-1);color:var(--text-secondary);cursor:pointer}
+.page{padding:28px 24px 64px;max-width:1240px}
+h1.greet{font-size:26px;font-weight:600;letter-spacing:-.02em;margin-bottom:20px}
+.answerbar{background:var(--surface-1);border:1px solid var(--border-subtle);border-left:3px solid var(--brand);
+border-radius:var(--r);padding:22px 24px;margin-bottom:24px}
+.answerbar p{font-family:var(--font-reading);font-size:17.5px;line-height:1.55;margin-bottom:8px}
+.answerbar p.lead{font-weight:600}
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+.tile{background:var(--surface-1);border:1px solid var(--border-subtle);border-radius:var(--r);padding:16px 18px;cursor:pointer;text-align:left;font:inherit;color:inherit;width:100%}
+.tile:hover{border-color:var(--brand)}
+.tile .lbl{font-size:12.5px;color:var(--text-secondary);font-weight:500}
+.tile .val{font-size:27px;font-weight:600;letter-spacing:-.025em;margin:5px 0 3px}
+.tile .chg{font-size:12.5px;font-weight:500}
+.up{color:var(--positive)}.down{color:var(--critical)}
+.tile .meta{font-size:11.5px;color:var(--text-muted);margin-top:9px;padding-top:9px;border-top:1px solid var(--border-subtle)}
+.card{background:var(--surface-1);border:1px solid var(--border-subtle);border-radius:var(--r);margin-bottom:20px}
+.card-h{display:flex;align-items:center;gap:12px;padding:15px 20px;border-bottom:1px solid var(--border-subtle)}
+.card-h h2{font-size:15.5px;font-weight:600}
+.card-b{padding:20px}
+svg.chart{display:block;width:100%;height:auto;overflow:visible}
+.legend{display:flex;gap:18px;flex-wrap:wrap;padding:14px 20px 0;font-size:12.5px;color:var(--text-secondary)}
+.legend span{display:inline-flex;align-items:center;gap:7px}
+.sw{width:14px;height:3px;border-radius:2px}
+.sw.band{height:10px;opacity:.18;background:var(--s1)}
+.sw.dash{background:repeating-linear-gradient(90deg,var(--s1) 0 4px,transparent 4px 7px)}
+.risk{display:flex;align-items:center;gap:14px;padding:13px 20px;border-top:1px solid var(--border-subtle);font-size:14px}
+.glyph{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;flex:none}
+.glyph.crit{background:var(--critical-subtle);color:var(--critical)}
+.glyph.warn{background:var(--surface-2);color:var(--caution)}
+.pill{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;padding:3px 8px;border-radius:100px}
+.pill.crit{background:var(--critical-subtle);color:var(--critical)}
+.pill.warn{background:var(--surface-2);color:var(--caution)}
+.alert{background:var(--surface-1);border:1px solid var(--border-subtle);border-left:3px solid var(--critical);
+border-radius:var(--r);padding:20px 22px;margin-bottom:20px}
+.alert .hd{display:flex;gap:9px;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--critical);margin-bottom:10px}
+.alert h3{font-family:var(--font-reading);font-size:19px;font-weight:600;margin-bottom:9px}
+.alert .why{font-family:var(--font-reading);font-size:15.5px;color:var(--text-secondary);margin-bottom:18px;max-width:68ch}
+.opts{border:1px solid var(--border-subtle);border-radius:var(--rc);overflow:hidden}
+.opt{display:flex;align-items:center;gap:14px;padding:11px 15px;font-size:14px}
+.opt+.opt{border-top:1px solid var(--border-subtle)}
+.opt .t{flex:1}.opt .amt{font-weight:600;color:var(--positive)}
+table.tbl{width:100%;border-collapse:collapse;font-size:13.5px}
+table.tbl th{text-align:left;font-weight:600;font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;
+color:var(--text-muted);padding:8px 12px;border-bottom:1px solid var(--border-subtle)}
+table.tbl td{padding:9px 12px;border-bottom:1px solid var(--border-subtle)}
+table.tbl td.n{text-align:right;font-variant-numeric:tabular-nums}
+.bar{height:6px;border-radius:3px;background:var(--s1);min-width:2px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.note{font-size:12.5px;color:var(--text-muted);background:var(--surface-2);border:1px dashed var(--border-strong);
+border-radius:var(--rc);padding:11px 14px;margin-bottom:22px}
+dialog{border:1px solid var(--border-strong);border-radius:var(--r);background:var(--surface-1);
+color:var(--text-primary);padding:0;max-width:820px;width:92vw;max-height:80vh}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+.dlg-h{display:flex;align-items:center;padding:15px 20px;border-bottom:1px solid var(--border-subtle);font-weight:600}
+.dlg-b{padding:0 20px 20px;overflow:auto;max-height:60vh}
+.btn{font:inherit;font-size:13.5px;font-weight:500;padding:7px 14px;border-radius:var(--rc);
+border:1px solid var(--border-strong);background:var(--surface-1);color:var(--text-primary);cursor:pointer}
+.btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}
+.loading{padding:80px;text-align:center;color:var(--text-muted)}
+@media(max-width:1000px){.shell{grid-template-columns:1fr;background:var(--surface-page)}.nav{display:none}
+.tiles{grid-template-columns:repeat(2,1fr)}.grid2{grid-template-columns:1fr}}
+@media(max-width:560px){.tiles{grid-template-columns:1fr}.page{padding:20px 14px 48px}}
+</style>
+</head>
+<body>
+<div class="shell">
+  <nav class="nav">
+    <div class="logo">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M3 17h7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+        <path d="M10 17c4 0 5-3.2 7-6.4S20.4 5 21 4.6" stroke="var(--brand)" stroke-width="2.2" stroke-linecap="round"/>
+        <circle cx="21" cy="4.6" r="1.9" fill="var(--brand)"/>
+      </svg>
+      <span>Ledger<span class="iq">IQ</span></span>
+    </div>
+    <a href="#" class="on">Home</a>
+    <a href="#forecast">Forecast</a>
+    <a href="#profit">Profit</a>
+    <a href="#customers">Customers</a>
+    <a href="#expenses">Expenses</a>
+  </nav>
+  <div>
+    <header class="topbar">
+      <span class="org" id="orgname">—</span>
+      <span class="sp"></span>
+      <span class="fresh"><span class="dot"></span> <span id="fresh">—</span></span>
+      <button class="iconbtn" id="theme" aria-label="Toggle theme">◐</button>
+    </header>
+    <div class="page" id="page"><div class="loading">Loading…</div></div>
+  </div>
+</div>
+
+<dialog id="drill">
+  <div class="dlg-h"><span id="drill-title">Source transactions</span><span class="sp"></span>
+    <button class="btn" onclick="document.getElementById('drill').close()">Close</button></div>
+  <div class="dlg-b"><table class="tbl"><thead><tr><th>Date</th><th>Description</th><th>Category</th><th class="n">Amount</th></tr></thead><tbody id="drill-body"></tbody></table></div>
+</dialog>
+
+<!-- A classic script, not type="module". The exported snapshot has to open from a
+     file:// URL, and browsers treat file:// pages as an opaque origin, which makes
+     module scripts a portability gamble for no benefit — nothing here imports. -->
+<script>window.__SNAPSHOT__ = {"dashboard":{"org":{"id":"b03e0c2a-3f83-420a-b3c5-02a00dd2ec3b","name":"Northwind Design"},"asOf":"2026-07-28T03:16:35.305Z","metrics":{"cash":{"key":"cash_position","label":"Cash","value":199090433,"unit":"currency","money":{"amount":"1990904.33","currency":"USD","minorUnits":199090433},"period":{"start":"2025-07-28","end":"2026-07-28","grain":"trailing_12"},"confidence":"high","provenance":{"metricKey":"cash_position","engineVersion":"2026.07.1","computedAt":"2026-07-28T03:16:35.321Z","sourceRecordCount":784,"drillDown":{"from":"2025-07-28","to":"2026-07-28"}}},"runway":{"key":"runway_months","label":"Runway","value":null,"unit":"months","period":{"start":"2025-07-28","end":"2026-07-28","grain":"trailing_12"},"confidence":"high","reason":"Cash-flow positive over the trailing 6 months — no runway limit","provenance":{"metricKey":"runway_months","engineVersion":"2026.07.1","computedAt":"2026-07-28T03:16:35.326Z","sourceRecordCount":0,"drillDown":{"from":"2025-07-28","to":"2026-07-28"}}},"revenue":{"key":"revenue","label":"Revenue","value":334829720,"unit":"currency","money":{"amount":"3348297.20","currency":"USD","minorUnits":334829720},"period":{"start":"2025-07-28","end":"2026-07-28","grain":"trailing_12"},"confidence":"high","provenance":{"metricKey":"revenue","engineVersion":"2026.07.1","computedAt":"2026-07-28T03:16:35.326Z","sourceRecordCount":96,"drillDown":{"from":"2025-07-28","to":"2026-07-28","statement":"revenue"}}},"profit":{"key":"net_profit","label":"Net profit","value":35242561,"unit":"currency","money":{"amount":"352425.61","currency":"USD","minorUnits":35242561},"period":{"start":"2025-07-28","end":"2026-07-28","grain":"trailing_12"},"confidence":"high","provenance":{"metricKey":"net_profit","engineVersion":"2026.07.1","computedAt":"2026-07-28T03:16:35.329Z","sourceRecordCount":96,"drillDown":{"from":"2025-07-28","to":"2026-07-28"}}},"opex":{"key":"operating_expenses","label":"Operating expenses","value":203348415,"unit":"currency","money":{"amount":"2033484.15","currency":"USD","minorUnits":203348415},"period":{"start":"2025-07-28","end":"2026-07-28","grain":"trailing_12"},"confidence":"high","provenance":{"metricKey":"operating_expenses","engineVersion":"2026.07.1","computedAt":"2026-07-28T03:16:35.331Z","sourceRecordCount":277,"drillDown":{"from":"2025-07-28","to":"2026-07-28"}}},"margin":{"key":"gross_margin","label":"Gross margin","value":65.45,"unit":"percent","period":{"start":"2026-07-01","end":"2026-07-31","grain":"month"},"confidence":"high","provenance":{"metricKey":"gross_margin","engineVersion":"2026.07.1","computedAt":"2026-07-28T03:16:35.332Z","sourceRecordCount":11,"drillDown":{"from":"2026-07-01","to":"2026-07-31"}}},"marginPrior":{"key":"gross_margin","label":"Gross margin","value":64.41,"unit":"percent","period":{"start":"2026-06-01","end":"2026-06-30","grain":"month"},"confidence":"high","provenance":{"metricKey":"gross_margin","engineVersion":"2026.07.1","computedAt":"2026-07-28T03:16:35.333Z","sourceRecordCount":11,"drillDown":{"from":"2026-06-01","to":"2026-06-30"}}},"burn":{"key":"monthly_burn","label":"Monthly burn","value":0,"unit":"currency","money":{"amount":"0.00","currency":"USD","minorUnits":0},"period":{"start":"2025-07-28","end":"2026-07-28","grain":"trailing_12"},"confidence":"high","provenance":{"metricKey":"monthly_burn","engineVersion":"2026.07.1","computedAt":"2026-07-28T03:16:35.341Z","sourceRecordCount":7,"drillDown":{"from":"2025-07-28","to":"2026-07-28"}}}},"series":[{"month":"2024-08","revenue":22500914,"cogs":5204036,"opex":15595952,"profit":1700926,"grossMarginPct":76.87},{"month":"2024-09","revenue":25431605,"cogs":5496733,"opex":16442684,"profit":3492188,"grossMarginPct":78.39},{"month":"2024-10","revenue":26713912,"cogs":5857517,"opex":15283911,"profit":5572484,"grossMarginPct":78.07},{"month":"2024-11","revenue":28713891,"cogs":6445673,"opex":15714464,"profit":6553754,"grossMarginPct":77.55},{"month":"2024-12","revenue":24188328,"cogs":5852655,"opex":15725883,"profit":2609790,"grossMarginPct":75.8},{"month":"2025-01","revenue":21776455,"cogs":5148329,"opex":15425657,"profit":1202469,"grossMarginPct":76.36},{"month":"2025-02","revenue":23615375,"cogs":5479570,"opex":16472441,"profit":1663364,"grossMarginPct":76.8},{"month":"2025-03","revenue":26142738,"cogs":6578623,"opex":16082816,"profit":3481299,"grossMarginPct":74.84},{"month":"2025-04","revenue":27547594,"cogs":5989367,"opex":17074870,"profit":4483357,"grossMarginPct":78.26},{"month":"2025-05","revenue":26499177,"cogs":6329312,"opex":16826613,"profit":3343252,"grossMarginPct":76.12},{"month":"2025-06","revenue":25831727,"cogs":6394264,"opex":16243104,"profit":3194359,"grossMarginPct":75.25},{"month":"2025-07","revenue":25415846,"cogs":6120896,"opex":16428600,"profit":2866350,"grossMarginPct":75.92},{"month":"2025-08","revenue":25133646,"cogs":5594802,"opex":16126585,"profit":3412259,"grossMarginPct":77.74},{"month":"2025-09","revenue":30231908,"cogs":7071413,"opex":16844549,"profit":6315946,"grossMarginPct":76.61},{"month":"2025-10","revenue":30209371,"cogs":6904114,"opex":16874936,"profit":6430321,"grossMarginPct":77.15},{"month":"2025-11","revenue":31740102,"cogs":8647843,"opex":16315863,"profit":6776396,"grossMarginPct":72.75},{"month":"2025-12","revenue":26929279,"cogs":7515766,"opex":17668636,"profit":1744877,"grossMarginPct":72.09},{"month":"2026-01","revenue":24547756,"cogs":7286026,"opex":16859602,"profit":402128,"grossMarginPct":70.32},{"month":"2026-02","revenue":24827553,"cogs":7436518,"opex":16671928,"profit":719107,"grossMarginPct":70.05},{"month":"2026-03","revenue":28530451,"cogs":8190984,"opex":17245148,"profit":3094319,"grossMarginPct":71.29},{"month":"2026-04","revenue":27563051,"cogs":8884958,"opex":17587940,"profit":1090153,"grossMarginPct":67.76},{"month":"2026-05","revenue":28535713,"cogs":8864764,"opex":17283099,"profit":2387850,"grossMarginPct":68.93},{"month":"2026-06","revenue":28267101,"cogs":10059231,"opex":16888287,"profit":1319583,"grossMarginPct":64.41},{"month":"2026-07","revenue":28313789,"cogs":9782325,"opex":10579898,"profit":7951566,"grossMarginPct":65.45}],"breakdowns":{"byCategory":[{"label":"Wages & Salaries","value":141222771,"money":{"amount":"1412227.71","currency":"USD","minorUnits":141222771},"share":0.47139126880935506,"count":24},{"label":"Subcontractors","value":88725184,"money":{"amount":"887251.84","currency":"USD","minorUnits":88725184},"share":0.29615816744668955,"count":18},{"label":"Benefits","value":14396000,"money":{"amount":"143960.00","currency":"USD","minorUnits":14396000},"share":0.04805279387825832,"count":12},{"label":"Payroll Taxes","value":12498216,"money":{"amount":"124982.16","currency":"USD","minorUnits":12498216},"share":0.0417181298481488,"count":24},{"label":"Rent","value":11749964,"money":{"amount":"117499.64","currency":"USD","minorUnits":11749964},"share":0.03922051946158347,"count":12},{"label":"Hosting & Infrastructure","value":7513560,"money":{"amount":"75135.60","currency":"USD","minorUnits":7513560},"share":0.02507971311280401,"count":12},{"label":"Travel & Entertainment","value":5694759,"money":{"amount":"56947.59","currency":"USD","minorUnits":5694759},"share":0.019008688553303447,"count":36},{"label":"Professional Fees","value":4581734,"money":{"amount":"45817.34","currency":"USD","minorUnits":4581734},"share":0.015293492602598498,"count":27},{"label":"Marketing","value":3856667,"money":{"amount":"38566.67","currency":"USD","minorUnits":3856667},"share":0.01287327204835238,"count":25},{"label":"Software & Subscriptions","value":3854633,"money":{"amount":"38546.33","currency":"USD","minorUnits":3854633},"share":0.012866482705288446,"count":72},{"label":"Office & Supplies","value":2815706,"money":{"amount":"28157.06","currency":"USD","minorUnits":2815706},"share":0.009398620452887968,"count":21},{"label":"Insurance","value":1864227,"money":{"amount":"18642.27","currency":"USD","minorUnits":1864227},"share":0.006222653221261729,"count":12},{"label":"Utilities","value":813738,"money":{"amount":"8137.38","currency":"USD","minorUnits":813738},"share":0.002716197859468336,"count":12}],"byCustomer":[{"label":"Vertex Industries","value":102780014,"money":{"amount":"1027800.14","currency":"USD","minorUnits":102780014},"share":0.3069620402872242,"count":12},{"label":"Harbor Logistics","value":62373079,"money":{"amount":"623730.79","currency":"USD","minorUnits":62373079},"share":0.18628298288455397,"count":12},{"label":"Cedar & Co","value":50275722,"money":{"amount":"502757.22","currency":"USD","minorUnits":50275722},"share":0.15015310468855633,"count":12},{"label":"O'Brien Partners","value":38762175,"money":{"amount":"387621.75","currency":"USD","minorUnits":38762175},"share":0.1157668291811133,"count":12},{"label":"Northwind Retail","value":31027955,"money":{"amount":"310279.55","currency":"USD","minorUnits":31027955},"share":0.09266786413105742,"count":12},{"label":"Lumen Health","value":24797358,"money":{"amount":"247973.58","currency":"USD","minorUnits":24797358},"share":0.07405960856760266,"count":12},{"label":"Pike Street Studio","value":14230361,"money":{"amount":"142303.61","currency":"USD","minorUnits":14230361},"share":0.042500292387426065,"count":12},{"label":"Ridgeline Ventures","value":10583056,"money":{"amount":"105830.56","currency":"USD","minorUnits":10583056},"share":0.03160727787246604,"count":12}],"aging":[{"bucket":"Current","minorUnits":20628857,"count":5},{"bucket":"1-30 days","minorUnits":12514716,"count":3},{"bucket":"31-60 days","minorUnits":968033,"count":1}]},"concentration":{"customer":"Vertex Industries","share":0.3069620402872242},"drivers":[{"label":"Marketing","currentMinor":348173,"priorMinor":0,"deltaMinor":348173,"shareOfChange":0.34119722278025766},{"label":"Office & Supplies","currentMinor":138437,"priorMinor":423694,"deltaMinor":-285257,"shareOfChange":0.2795417685421556},{"label":"Subcontractors","currentMinor":9098271,"priorMinor":9378823,"deltaMinor":-280552,"shareOfChange":0.2749310349896369},{"label":"Wages & Salaries","currentMinor":12018852,"priorMinor":11961548,"deltaMinor":57304,"shareOfChange":0.05615589277227092},{"label":"Travel & Entertainment","currentMinor":489244,"priorMinor":510277,"deltaMinor":-21033,"shareOfChange":0.020611595921387237},{"label":"Rent","currentMinor":985739,"priorMinor":974143,"deltaMinor":11596,"shareOfChange":0.011363669771521248}],"forecast":{"generatedAt":"2026-07-28T03:16:35.383Z","horizonDays":91,"startingCashMinor":199090433,"points":[{"date":"2026-07-29","p50":199090433,"p10":199072433,"p90":199105733,"committed":0,"receivables":0,"variable":0},{"date":"2026-07-30","p50":199090433,"p10":199054433,"p90":199121033,"committed":0,"receivables":0,"variable":0},{"date":"2026-07-31","p50":199090433,"p10":199036433,"p90":199136333,"committed":0,"receivables":0,"variable":0},{"date":"2026-08-01","p50":199090433,"p10":199018433,"p90":199151633,"committed":0,"receivables":0,"variable":0},{"date":"2026-08-02","p50":207341645,"p10":207251645,"p90":207418145,"committed":0,"receivables":8251212,"variable":0},{"date":"2026-08-03","p50":207341645,"p10":207233645,"p90":207433445,"committed":0,"receivables":8251212,"variable":0},{"date":"2026-08-04","p50":202584534,"p10":202458534,"p90":202691634,"committed":-4757111,"receivables":8251212,"variable":0},{"date":"2026-08-05","p50":205965520,"p10":205821520,"p90":206087920,"committed":-4757111,"receivables":11632198,"variable":0},{"date":"2026-08-06","p50":205965520,"p10":205803520,"p90":206103220,"committed":-4757111,"receivables":11632198,"variable":0},{"date":"2026-08-07","p50":205965520,"p10":205785520,"p90":206118520,"committed":-4757111,"receivables":11632198,"variable":0},{"date":"2026-08-08","p50":205943539,"p10":205745539,"p90":206111839,"committed":-4779092,"receivables":11632198,"variable":0},{"date":"2026-08-09","p50":205739805,"p10":205523805,"p90":205923405,"committed":-4982826,"receivables":11632198,"variable":0},{"date":"2026-08-10","p50":197121208,"p10":196887208,"p90":197320108,"committed":-13601423,"receivables":11632198,"variable":0},{"date":"2026-08-11","p50":202654674,"p10":202402674,"p90":202868874,"committed":-13853083,"receivables":17417324,"variable":0},{"date":"2026-08-12","p50":202654674,"p10":202384674,"p90":202884174,"committed":-13853083,"receivables":17417324,"variable":0},{"date":"2026-08-13","p50":202654674,"p10":202366674,"p90":202899474,"committed":-13853083,"receivables":17417324,"variable":0},{"date":"2026-08-14","p50":200403176,"p10":200097176,"p90":200663276,"committed":-18878458,"receivables":20191201,"variable":0},{"date":"2026-08-15","p50":199701048,"p10":199377048,"p90":199976448,"committed":-19580586,"receivables":20191201,"variable":0},{"date":"2026-08-16","p50":199623907,"p10":199281907,"p90":199914607,"committed":-19657727,"receivables":20191201,"variable":0},{"date":"2026-08-17","p50":199568311,"p10":199208311,"p90":199874311,"committed":-19713323,"receivables":20191201,"variable":0},{"date":"2026-08-18","p50":198896714,"p10":198518714,"p90":199218014,"committed":-20384920,"receivables":20191201,"variable":0},{"date":"2026-08-19","p50":198896714,"p10":198500714,"p90":199233314,"committed":-20384920,"receivables":20191201,"variable":0},{"date":"2026-08-20","p50":198896714,"p10":198482714,"p90":199248614,"committed":-20384920,"receivables":20191201,"variable":0},{"date":"2026-08-21","p50":198752428,"p10":198320428,"p90":199119628,"committed":-20529206,"receivables":20191201,"variable":0},{"date":"2026-08-22","p50":197775217,"p10":197325217,"p90":198157717,"committed":-21506417,"receivables":20191201,"variable":0},{"date":"2026-08-23","p50":197775217,"p10":197307217,"p90":198173017,"committed":-21506417,"receivables":20191201,"variable":0},{"date":"2026-08-24","p50":193018106,"p10":192532106,"p90":193431206,"committed":-26263528,"receivables":20191201,"variable":0},{"date":"2026-08-25","p50":202041749,"p10":201537749,"p90":202470149,"committed":-26263528,"receivables":29214844,"variable":0},{"date":"2026-08-26","p50":202041749,"p10":201519749,"p90":202485449,"committed":-26263528,"receivables":29214844,"variable":0},{"date":"2026-08-27","p50":202041749,"p10":201501749,"p90":202500749,"committed":-26263528,"receivables":29214844,"variable":0},{"date":"2026-08-28","p50":202041749,"p10":201483749,"p90":202516049,"committed":-26263528,"receivables":29214844,"variable":0},{"date":"2026-08-29","p50":202041749,"p10":201465749,"p90":202531349,"committed":-26263528,"receivables":29214844,"variable":0},{"date":"2026-08-30","p50":202041749,"p10":201447749,"p90":202546649,"committed":-26263528,"receivables":29214844,"variable":0},{"date":"2026-08-31","p50":202041749,"p10":201429749,"p90":202561949,"committed":-26263528,"receivables":29214844,"variable":0},{"date":"2026-09-01","p50":202041749,"p10":201411749,"p90":202577249,"committed":-26263528,"receivables":29214844,"variable":0},{"date":"2026-09-02","p50":202041749,"p10":201393749,"p90":202592549,"committed":-26263528,"receivables":29214844,"variable":0},{"date":"2026-09-03","p50":197284638,"p10":196618638,"p90":197850738,"committed":-31020639,"receivables":29214844,"variable":0},{"date":"2026-09-04","p50":200395462,"p10":199711462,"p90":200976862,"committed":-31020639,"receivables":32325668,"variable":0},{"date":"2026-09-05","p50":200395462,"p10":199693462,"p90":200992162,"committed":-31020639,"receivables":32325668,"variable":0},{"date":"2026-09-06","p50":200395462,"p10":199675462,"p90":201007462,"committed":-31020639,"receivables":32325668,"variable":0},{"date":"2026-09-07","p50":200395462,"p10":199657462,"p90":201022762,"committed":-31020639,"receivables":32325668,"variable":0},{"date":"2026-09-08","p50":200373481,"p10":199617481,"p90":201016081,"committed":-31042620,"receivables":32325668,"variable":0},{"date":"2026-09-09","p50":200169747,"p10":199395747,"p90":200827647,"committed":-31246354,"receivables":32325668,"variable":0},{"date":"2026-09-10","p50":191551150,"p10":190759150,"p90":192224350,"committed":-39864951,"receivables":32325668,"variable":0},{"date":"2026-09-11","p50":191299490,"p10":190489490,"p90":191987990,"committed":-40116611,"receivables":32325668,"variable":0},{"date":"2026-09-12","p50":191299490,"p10":190471490,"p90":192003290,"committed":-40116611,"receivables":32325668,"variable":0},{"date":"2026-09-13","p50":186542379,"p10":185696379,"p90":187261479,"committed":-44873722,"receivables":32325668,"variable":0},{"date":"2026-09-14","p50":186274115,"p10":185410115,"p90":187008515,"committed":-45141986,"receivables":32325668,"variable":0},{"date":"2026-09-15","p50":185571987,"p10":184689987,"p90":186321687,"committed":-45844114,"receivables":32325668,"variable":0},{"date":"2026-09-16","p50":186377364,"p10":185477364,"p90":187142364,"committed":-45921255,"receivables":33208186,"variable":0},{"date":"2026-09-17","p50":186321768,"p10":185403768,"p90":187102068,"committed":-45976851,"receivables":33208186,"variable":0},{"date":"2026-09-18","p50":185650171,"p10":184714171,"p90":186445771,"committed":-46648448,"receivables":33208186,"variable":0},{"date":"2026-09-19","p50":185650171,"p10":184696171,"p90":186461071,"committed":-46648448,"receivables":33208186,"variable":0},{"date":"2026-09-20","p50":185650171,"p10":184678171,"p90":186476371,"committed":-46648448,"receivables":33208186,"variable":0},{"date":"2026-09-21","p50":185505885,"p10":184515885,"p90":186347385,"committed":-46792734,"receivables":33208186,"variable":0},{"date":"2026-09-22","p50":184528674,"p10":183520674,"p90":185385474,"committed":-47769945,"receivables":33208186,"variable":0},{"date":"2026-09-23","p50":179771563,"p10":178745563,"p90":180643663,"committed":-52527056,"receivables":33208186,"variable":0},{"date":"2026-09-24","p50":179771563,"p10":178727563,"p90":180658963,"committed":-52527056,"receivables":33208186,"variable":0},{"date":"2026-09-25","p50":179771563,"p10":178709563,"p90":180674263,"committed":-52527056,"receivables":33208186,"variable":0},{"date":"2026-09-26","p50":179771563,"p10":178691563,"p90":180689563,"committed":-52527056,"receivables":33208186,"variable":0},{"date":"2026-09-27","p50":179771563,"p10":178673563,"p90":180704863,"committed":-52527056,"receivables":33208186,"variable":0},{"date":"2026-09-28","p50":179771563,"p10":178655563,"p90":180720163,"committed":-52527056,"receivables":33208186,"variable":0},{"date":"2026-09-29","p50":179771563,"p10":178637563,"p90":180735463,"committed":-52527056,"receivables":33208186,"variable":0},{"date":"2026-09-30","p50":179771563,"p10":178619563,"p90":180750763,"committed":-52527056,"receivables":33208186,"variable":0},{"date":"2026-10-01","p50":201909917,"p10":200739917,"p90":202904417,"committed":-52527056,"receivables":55346540,"variable":0},{"date":"2026-10-02","p50":201909917,"p10":200721917,"p90":202919717,"committed":-52527056,"receivables":55346540,"variable":0},{"date":"2026-10-03","p50":197152806,"p10":195946806,"p90":198177906,"committed":-57284167,"receivables":55346540,"variable":0},{"date":"2026-10-04","p50":197152806,"p10":195928806,"p90":198193206,"committed":-57284167,"receivables":55346540,"variable":0},{"date":"2026-10-05","p50":197152806,"p10":195910806,"p90":198208506,"committed":-57284167,"receivables":55346540,"variable":0},{"date":"2026-10-06","p50":197152806,"p10":195892806,"p90":198223806,"committed":-57284167,"receivables":55346540,"variable":0},{"date":"2026-10-07","p50":197152806,"p10":195874806,"p90":198239106,"committed":-57284167,"receivables":55346540,"variable":0},{"date":"2026-10-08","p50":197130825,"p10":195834825,"p90":198232425,"committed":-57306148,"receivables":55346540,"variable":0},{"date":"2026-10-09","p50":196927091,"p10":195613091,"p90":198043991,"committed":-57509882,"receivables":55346540,"variable":0},{"date":"2026-10-10","p50":188308494,"p10":186976494,"p90":189440694,"committed":-66128479,"receivables":55346540,"variable":0},{"date":"2026-10-11","p50":188056834,"p10":186706834,"p90":189204334,"committed":-66380139,"receivables":55346540,"variable":0},{"date":"2026-10-12","p50":188960254,"p10":187592254,"p90":190123054,"committed":-66380139,"receivables":56249960,"variable":0},{"date":"2026-10-13","p50":184203143,"p10":182817143,"p90":185381243,"committed":-71137250,"receivables":56249960,"variable":0},{"date":"2026-10-14","p50":183934879,"p10":182530879,"p90":185128279,"committed":-71405514,"receivables":56249960,"variable":0},{"date":"2026-10-15","p50":183232751,"p10":181810751,"p90":184441451,"committed":-72107642,"receivables":56249960,"variable":0},{"date":"2026-10-16","p50":183155610,"p10":181715610,"p90":184379610,"committed":-72184783,"receivables":56249960,"variable":0},{"date":"2026-10-17","p50":183100014,"p10":181642014,"p90":184339314,"committed":-72240379,"receivables":56249960,"variable":0},{"date":"2026-10-18","p50":182428417,"p10":180952417,"p90":183683017,"committed":-72911976,"receivables":56249960,"variable":0},{"date":"2026-10-19","p50":182428417,"p10":180934417,"p90":183698317,"committed":-72911976,"receivables":56249960,"variable":0},{"date":"2026-10-20","p50":182428417,"p10":180916417,"p90":183713617,"committed":-72911976,"receivables":56249960,"variable":0},{"date":"2026-10-21","p50":182284131,"p10":180754131,"p90":183584631,"committed":-73056262,"receivables":56249960,"variable":0},{"date":"2026-10-22","p50":181306920,"p10":179758920,"p90":182622720,"committed":-74033473,"receivables":56249960,"variable":0},{"date":"2026-10-23","p50":176549809,"p10":174983809,"p90":177880909,"committed":-78790584,"receivables":56249960,"variable":0},{"date":"2026-10-24","p50":176549809,"p10":174965809,"p90":177896209,"committed":-78790584,"receivables":56249960,"variable":0},{"date":"2026-10-25","p50":176549809,"p10":174947809,"p90":177911509,"committed":-78790584,"receivables":56249960,"variable":0},{"date":"2026-10-26","p50":176549809,"p10":174929809,"p90":177926809,"committed":-78790584,"receivables":56249960,"variable":0},{"date":"2026-10-27","p50":176549809,"p10":174911809,"p90":177942109,"committed":-78790584,"receivables":56249960,"variable":0}],"riskEvents":[],"assumptions":[{"key":"ar_timing_from_history","label":"Receivable timing","value":"per-customer history","description":"Open invoices are timed by each customer’s observed payment behaviour, not by the invoice due date.","source":"org_history"},{"key":"payroll_cadence","label":"Payroll cadence","value":"projected from history","description":"Upcoming payroll runs are projected from the observed cadence and amount.","source":"org_history"},{"key":"new_revenue","label":"New revenue","value":"$221,383.54/mo","description":"Projected at 80% of the trailing 6-month invoicing run-rate, collected after the typical payment lag. Deliberately discounted — pipeline is not revenue.","source":"org_history"}],"confidence":"high","historyDays":725,"methodVersion":"2026.07.1"}},"drilldowns":{"asset|2025-07-28|2026-07-28":[{"date":"2025-10-21","description":"Payment — Vertex Industries","merchant_name":"Vertex Industries","amount":"99716.0300","direction":"inflow","category":"Uncategorized"},{"date":"2025-12-13","description":"Payment — Vertex Industries","merchant_name":"Vertex Industries","amount":"99587.0400","direction":"inflow","category":"Uncategorized"},{"date":"2026-04-16","description":"Payment — Vertex Industries","merchant_name":"Vertex Industries","amount":"89133.3500","direction":"inflow","category":"Uncategorized"},{"date":"2025-11-11","description":"Payment — Vertex Industries","merchant_name":"Vertex Industries","amount":"88402.3200","direction":"inflow","category":"Uncategorized"},{"date":"2025-08-25","description":"Payment — Vertex Industries","merchant_name":"Vertex Industries","amount":"86096.2400","direction":"inflow","category":"Uncategorized"},{"date":"2025-09-28","description":"Payment — Vertex Industries","merchant_name":"Vertex Industries","amount":"84702.7600","direction":"inflow","category":"Uncategorized"},{"date":"2026-06-22","description":"Payment — Vertex Industries","merchant_name":"Vertex Industries","amount":"83325.9000","direction":"inflow","category":"Uncategorized"},{"date":"2025-08-03","description":"Payment — Vertex Industries","merchant_name":"Vertex Industries","amount":"82890.3400","direction":"inflow","category":"Uncategorized"},{"date":"2026-05-18","description":"Payment — Vertex Industries","merchant_name":"Vertex Industries","amount":"79566.6100","direction":"inflow","category":"Uncategorized"},{"date":"2026-02-03","description":"Payment — Vertex Industries","merchant_name":"Vertex Industries","amount":"78659.8300","direction":"inflow","category":"Uncategorized"},{"date":"2026-01-30","description":"Payment — Vertex Industries","merchant_name":"Vertex Industries","amount":"77341.1500","direction":"inflow","category":"Uncategorized"},{"date":"2026-03-31","description":"Payment — Vertex Industries","merchant_name":"Vertex Industries","amount":"74616.6000","direction":"inflow","category":"Uncategorized"},{"date":"2025-11-15","description":"Payment — Harbor Logistics","merchant_name":"Harbor Logistics","amount":"61564.7000","direction":"inflow","category":"Uncategorized"},{"date":"2025-12-10","description":"Payment — Harbor Logistics","merchant_name":"Harbor Logistics","amount":"58014.6700","direction":"inflow","category":"Uncategorized"},{"date":"2026-04-04","description":"Payment — Harbor Logistics","merchant_name":"Harbor Logistics","amount":"56227.5100","direction":"inflow","category":"Uncategorized"},{"date":"2026-07-08","description":"Payment — Harbor Logistics","merchant_name":"Harbor Logistics","amount":"56127.7900","direction":"inflow","category":"Uncategorized"},{"date":"2026-01-03","description":"Payment — Harbor Logistics","merchant_name":"Harbor Logistics","amount":"52113.8700","direction":"inflow","category":"Uncategorized"},{"date":"2026-05-10","description":"Payment — Harbor Logistics","merchant_name":"Harbor Logistics","amount":"51995.4600","direction":"inflow","category":"Uncategorized"},{"date":"2025-10-12","description":"Payment — Harbor Logistics","merchant_name":"Harbor Logistics","amount":"51559.7100","direction":"inflow","category":"Uncategorized"},{"date":"2026-06-13","description":"Payment — Harbor Logistics","merchant_name":"Harbor Logistics","amount":"50509.1100","direction":"inflow","category":"Uncategorized"},{"date":"2025-11-29","description":"Payment — Cedar & Co","merchant_name":"Cedar & Co","amount":"49126.6700","direction":"inflow","category":"Uncategorized"},{"date":"2026-02-01","description":"Payment — Harbor Logistics","merchant_name":"Harbor Logistics","amount":"48721.9600","direction":"inflow","category":"Uncategorized"},{"date":"2025-10-23","description":"Payment — Cedar & Co","merchant_name":"Cedar & Co","amount":"47323.1700","direction":"inflow","category":"Uncategorized"},{"date":"2025-09-27","description":"Payment — Cedar & Co","merchant_name":"Cedar & Co","amount":"45576.6900","direction":"inflow","category":"Uncategorized"},{"date":"2026-03-08","description":"Payment — Harbor Logistics","merchant_name":"Harbor Logistics","amount":"45316.7700","direction":"inflow","category":"Uncategorized"},{"date":"2026-05-18","description":"Payment — Cedar & Co","merchant_name":"Cedar & Co","amount":"45238.4800","direction":"inflow","category":"Uncategorized"},{"date":"2025-09-09","description":"Payment — Harbor Logistics","merchant_name":"Harbor Logistics","amount":"43408.3100","direction":"inflow","category":"Uncategorized"},{"date":"2026-07-17","description":"Payment — Cedar & Co","merchant_name":"Cedar & Co","amount":"43004.7200","direction":"inflow","category":"Uncategorized"},{"date":"2025-08-02","description":"Payment — Harbor Logistics","merchant_name":"Harbor Logistics","amount":"42581.7400","direction":"inflow","category":"Uncategorized"},{"date":"2025-12-26","description":"Payment — Cedar & Co","merchant_name":"Cedar & Co","amount":"42116.7400","direction":"inflow","category":"Uncategorized"},{"date":"2026-06-26","description":"Payment — Cedar & Co","merchant_name":"Cedar & Co","amount":"41654.9500","direction":"inflow","category":"Uncategorized"},{"date":"2026-04-19","description":"Payment — Cedar & Co","merchant_name":"Cedar & Co","amount":"39564.9100","direction":"inflow","category":"Uncategorized"},{"date":"2025-08-21","description":"Payment — Cedar & Co","merchant_name":"Cedar & Co","amount":"39262.6500","direction":"inflow","category":"Uncategorized"},{"date":"2026-02-19","description":"Payment — Cedar & Co","merchant_name":"Cedar & Co","amount":"39119.8200","direction":"inflow","category":"Uncategorized"},{"date":"2026-03-20","description":"Payment — Cedar & Co","merchant_name":"Cedar & Co","amount":"38431.5500","direction":"inflow","category":"Uncategorized"},{"date":"2025-11-02","description":"Payment — O'Brien Partners","merchant_name":"O'Brien Partners","amount":"35455.5800","direction":"inflow","category":"Uncategorized"},{"date":"2026-07-19","description":"Payment — O'Brien Partners","merchant_name":"O'Brien Partners","amount":"35222.5500","direction":"inflow","category":"Uncategorized"},{"date":"2026-06-12","description":"Payment — O'Brien Partners","merchant_name":"O'Brien Partners","amount":"35153.3500","direction":"inflow","category":"Uncategorized"},{"date":"2026-01-01","description":"Payment — O'Brien Partners","merchant_name":"O'Brien Partners","amount":"34974.2600","direction":"inflow","category":"Uncategorized"},{"date":"2026-05-23","description":"Payment — O'Brien Partners","merchant_name":"O'Brien Partners","amount":"34120.4400","direction":"inflow","category":"Uncategorized"},{"date":"2026-01-26","description":"Payment — Cedar & Co","merchant_name":"Cedar & Co","amount":"32336.8700","direction":"inflow","category":"Uncategorized"},{"date":"2025-11-10","description":"Payment — O'Brien Partners","merchant_name":"O'Brien Partners","amount":"32295.1100","direction":"inflow","category":"Uncategorized"},{"date":"2026-02-13","description":"Payment — O'Brien Partners","merchant_name":"O'Brien Partners","amount":"31140.4200","direction":"inflow","category":"Uncategorized"},{"date":"2025-12-14","description":"Payment — Northwind Retail","merchant_name":"Northwind Retail","amount":"30910.2900","direction":"inflow","category":"Uncategorized"},{"date":"2025-08-29","description":"Payment — O'Brien Partners","merchant_name":"O'Brien Partners","amount":"29851.8700","direction":"inflow","category":"Uncategorized"},{"date":"2025-10-13","description":"Payment — Northwind Retail","merchant_name":"Northwind Retail","amount":"28991.3600","direction":"inflow","category":"Uncategorized"},{"date":"2026-03-26","description":"Payment — O'Brien Partners","merchant_name":"O'Brien Partners","amount":"28852.3600","direction":"inflow","category":"Uncategorized"},{"date":"2026-04-17","description":"Payment — Northwind Retail","merchant_name":"Northwind Retail","amount":"28322.8500","direction":"inflow","category":"Uncategorized"},{"date":"2025-10-01","description":"Payment — O'Brien Partners","merchant_name":"O'Brien Partners","amount":"27894.1400","direction":"inflow","category":"Uncategorized"},{"date":"2026-02-25","description":"Payment — O'Brien Partners","merchant_name":"O'Brien Partners","amount":"27595.4400","direction":"inflow","category":"Uncategorized"},{"date":"2025-11-15","description":"Payment — Northwind Retail","merchant_name":"Northwind Retail","amount":"27111.6900","direction":"inflow","category":"Uncategorized"},{"date":"2025-08-10","description":"Payment — O'Brien Partners","merchant_name":"O'Brien Partners","amount":"26394.4800","direction":"inflow","category":"Uncategorized"},{"date":"2026-07-26","description":"Payment — Northwind Retail","merchant_name":"Northwind Retail","amount":"26319.2400","direction":"inflow","category":"Uncategorized"},{"date":"2026-06-15","description":"Payment — Northwind Retail","merchant_name":"Northwind Retail","amount":"24942.1400","direction":"inflow","category":"Uncategorized"},{"date":"2026-01-21","description":"Payment — Northwind Retail","merchant_name":"Northwind Retail","amount":"24623.4100","direction":"inflow","category":"Uncategorized"},{"date":"2026-05-22","description":"Payment — Northwind Retail","merchant_name":"Northwind Retail","amount":"24547.7500","direction":"inflow","category":"Uncategorized"},{"date":"2025-08-21","description":"Payment — Northwind Retail","merchant_name":"Northwind Retail","amount":"24120.3200","direction":"inflow","category":"Uncategorized"},{"date":"2026-03-26","description":"Payment — Northwind Retail","merchant_name":"Northwind Retail","amount":"23340.7000","direction":"inflow","category":"Uncategorized"},{"date":"2026-05-26","description":"Payment — Lumen Health","merchant_name":"Lumen Health","amount":"23191.8700","direction":"inflow","category":"Uncategorized"},{"date":"2026-04-28","description":"Payment — Lumen Health","merchant_name":"Lumen Health","amount":"22169.6600","direction":"inflow","category":"Uncategorized"},{"date":"2026-06-23","description":"Payment — Lumen Health","merchant_name":"Lumen Health","amount":"22123.4900","direction":"inflow","category":"Uncategorized"},{"date":"2025-09-17","description":"Payment — Northwind Retail","merchant_name":"Northwind Retail","amount":"22108.9800","direction":"inflow","category":"Uncategorized"},{"date":"2025-11-24","description":"Payment — Lumen Health","merchant_name":"Lumen Health","amount":"22074.0200","direction":"inflow","category":"Uncategorized"},{"date":"2025-10-29","description":"Payment — Lumen Health","merchant_name":"Lumen Health","amount":"21860.5700","direction":"inflow","category":"Uncategorized"},{"date":"2026-07-26","description":"Payment — Lumen Health","merchant_name":"Lumen Health","amount":"21466.7100","direction":"inflow","category":"Uncategorized"},{"date":"2026-02-17","description":"Payment — Northwind Retail","merchant_name":"Northwind Retail","amount":"21322.3700","direction":"inflow","category":"Uncategorized"},{"date":"2025-12-23","description":"Payment — Lumen Health","merchant_name":"Lumen Health","amount":"20841.8800","direction":"inflow","category":"Uncategorized"},{"date":"2026-03-18","description":"Payment — Lumen Health","merchant_name":"Lumen Health","amount":"19924.8100","direction":"inflow","category":"Uncategorized"},{"date":"2025-09-19","description":"Payment — Lumen Health","merchant_name":"Lumen Health","amount":"19625.3400","direction":"inflow","category":"Uncategorized"},{"date":"2026-01-19","description":"Payment — Lumen Health","merchant_name":"Lumen Health","amount":"19046.5900","direction":"inflow","category":"Uncategorized"},{"date":"2026-02-23","description":"Payment — Lumen Health","merchant_name":"Lumen Health","amount":"18914.3500","direction":"inflow","category":"Uncategorized"},{"date":"2025-08-21","description":"Payment — Lumen Health","merchant_name":"Lumen Health","amount":"16734.2900","direction":"inflow","category":"Uncategorized"},{"date":"2025-11-18","description":"Payment — Pike Street Studio","merchant_name":"Pike Street Studio","amount":"13809.9800","direction":"inflow","category":"Uncategorized"},{"date":"2025-10-19","description":"Payment — Pike Street Studio","merchant_name":"Pike Street Studio","amount":"13650.0400","direction":"inflow","category":"Uncategorized"},{"date":"2026-05-21","description":"Payment — Pike Street Studio","merchant_name":"Pike Street Studio","amount":"13246.7500","direction":"inflow","category":"Uncategorized"},{"date":"2026-04-25","description":"Payment — Pike Street Studio","merchant_name":"Pike Street Studio","amount":"12879.5900","direction":"inflow","category":"Uncategorized"},{"date":"2026-07-16","description":"Payment — Pike Street Studio","merchant_name":"Pike Street Studio","amount":"12377.8900","direction":"inflow","category":"Uncategorized"},{"date":"2025-12-24","description":"Payment — Pike Street Studio","merchant_name":"Pike Street Studio","amount":"12110.6300","direction":"inflow","category":"Uncategorized"},{"date":"2025-09-19","description":"Payment — Pike Street Studio","merchant_name":"Pike Street Studio","amount":"12077.1700","direction":"inflow","category":"Uncategorized"},{"date":"2026-06-18","description":"Payment — Pike Street Studio","merchant_name":"Pike Street Studio","amount":"11298.3800","direction":"inflow","category":"Uncategorized"},{"date":"2026-02-19","description":"Payment — Pike Street Studio","merchant_name":"Pike Street Studio","amount":"11079.4700","direction":"inflow","category":"Uncategorized"},{"date":"2026-03-23","description":"Payment — Pike Street Studio","merchant_name":"Pike Street Studio","amount":"10824.8800","direction":"inflow","category":"Uncategorized"},{"date":"2026-01-24","description":"Payment — Ridgeline Ventures","merchant_name":"Ridgeline Ventures","amount":"9886.1100","direction":"inflow","category":"Uncategorized"},{"date":"2026-07-02","description":"Payment — Ridgeline Ventures","merchant_name":"Ridgeline Ventures","amount":"9753.1800","direction":"inflow","category":"Uncategorized"},{"date":"2026-01-16","description":"Payment — Pike Street Studio","merchant_name":"Pike Street Studio","amount":"9644.0000","direction":"inflow","category":"Uncategorized"},{"date":"2026-01-22","description":"Payment — Ridgeline Ventures","merchant_name":"Ridgeline Ventures","amount":"9317.2000","direction":"inflow","category":"Uncategorized"},{"date":"2025-08-19","description":"Payment — Pike Street Studio","merchant_name":"Pike Street Studio","amount":"9304.8300","direction":"inflow","category":"Uncategorized"},{"date":"2026-03-23","description":"Payment — Ridgeline Ventures","merchant_name":"Ridgeline Ventures","amount":"9004.6900","direction":"inflow","category":"Uncategorized"},{"date":"2026-02-22","description":"Payment — Ridgeline Ventures","merchant_name":"Ridgeline Ventures","amount":"8904.0900","direction":"inflow","category":"Uncategorized"},{"date":"2025-08-15","description":"Payment — Ridgeline Ventures","merchant_name":"Ridgeline Ventures","amount":"8579.1400","direction":"inflow","category":"Uncategorized"},{"date":"2026-05-27","description":"Payment — Ridgeline Ventures","merchant_name":"Ridgeline Ventures","amount":"8319.1200","direction":"inflow","category":"Uncategorized"},{"date":"2026-04-24","description":"Payment — Ridgeline Ventures","merchant_name":"Ridgeline Ventures","amount":"8150.5000","direction":"inflow","category":"Uncategorized"},{"date":"2025-11-30","description":"Payment — Ridgeline Ventures","merchant_name":"Ridgeline Ventures","amount":"7920.5000","direction":"inflow","category":"Uncategorized"},{"date":"2025-10-17","description":"Payment — Ridgeline Ventures","merchant_name":"Ridgeline Ventures","amount":"7162.3400","direction":"inflow","category":"Uncategorized"},{"date":"2026-05-28","description":"Payment — Ridgeline Ventures","merchant_name":"Ridgeline Ventures","amount":"7035.4600","direction":"inflow","category":"Uncategorized"}],"revenue|2025-07-28|2026-07-28":[{"date":"2025-09-04","description":"Invoice — Vertex Industries","merchant_name":"Vertex Industries","amount":"99716.0300","direction":"inflow","category":"Services Revenue"},{"date":"2025-11-02","description":"Invoice — Vertex Industries","merchant_name":"Vertex Industries","amount":"99587.0400","direction":"inflow","category":"Services Revenue"},{"date":"2026-07-06","description":"Invoice — Vertex Industries","merchant_name":"Vertex Industries","amount":"90236.4300","direction":"inflow","category":"Services Revenue"},{"date":"2026-03-03","description":"Invoice — Vertex Industries","merchant_name":"Vertex Industries","amount":"89133.3500","direction":"inflow","category":"Services Revenue"},{"date":"2025-10-02","description":"Invoice — Vertex Industries","merchant_name":"Vertex Industries","amount":"88402.3200","direction":"inflow","category":"Services Revenue"},{"date":"2025-08-05","description":"Invoice — Vertex Industries","merchant_name":"Vertex Industries","amount":"84702.7600","direction":"inflow","category":"Services Revenue"},{"date":"2026-05-06","description":"Invoice — Vertex Industries","merchant_name":"Vertex Industries","amount":"83325.9000","direction":"inflow","category":"Services Revenue"},{"date":"2026-06-04","description":"Invoice — Vertex Industries","merchant_name":"Vertex Industries","amount":"82512.1200","direction":"inflow","category":"Services Revenue"},{"date":"2026-04-03","description":"Invoice — Vertex Industries","merchant_name":"Vertex Industries","amount":"79566.6100","direction":"inflow","category":"Services Revenue"},{"date":"2026-01-03","description":"Invoice — Vertex Industries","merchant_name":"Vertex Industries","amount":"78659.8300","direction":"inflow","category":"Services Revenue"},{"date":"2025-12-07","description":"Invoice — Vertex Industries","merchant_name":"Vertex Industries","amount":"77341.1500","direction":"inflow","category":"Services Revenue"},{"date":"2026-02-04","description":"Invoice — Vertex Industries","merchant_name":"Vertex Industries","amount":"74616.6000","direction":"inflow","category":"Services Revenue"},{"date":"2025-10-07","description":"Invoice — Harbor Logistics","merchant_name":"Harbor Logistics","amount":"61564.7000","direction":"inflow","category":"Services Revenue"},{"date":"2025-11-06","description":"Invoice — Harbor Logistics","merchant_name":"Harbor Logistics","amount":"58014.6700","direction":"inflow","category":"Services Revenue"},{"date":"2026-03-03","description":"Invoice — Harbor Logistics","merchant_name":"Harbor Logistics","amount":"56227.5100","direction":"inflow","category":"Services Revenue"},{"date":"2026-06-04","description":"Invoice — Harbor Logistics","merchant_name":"Harbor Logistics","amount":"56127.7900","direction":"inflow","category":"Services Revenue"},{"date":"2025-12-07","description":"Invoice — Harbor Logistics","merchant_name":"Harbor Logistics","amount":"52113.8700","direction":"inflow","category":"Services Revenue"},{"date":"2026-04-07","description":"Invoice — Harbor Logistics","merchant_name":"Harbor Logistics","amount":"51995.4600","direction":"inflow","category":"Services Revenue"},{"date":"2025-09-05","description":"Invoice — Harbor Logistics","merchant_name":"Harbor Logistics","amount":"51559.7100","direction":"inflow","category":"Services Revenue"},{"date":"2026-05-05","description":"Invoice — Harbor Logistics","merchant_name":"Harbor Logistics","amount":"50509.1100","direction":"inflow","category":"Services Revenue"},{"date":"2025-11-07","description":"Invoice — Cedar & Co","merchant_name":"Cedar & Co","amount":"49126.6700","direction":"inflow","category":"Services Revenue"},{"date":"2026-01-02","description":"Invoice — Harbor Logistics","merchant_name":"Harbor Logistics","amount":"48721.9600","direction":"inflow","category":"Services Revenue"},{"date":"2026-07-07","description":"Invoice — Harbor Logistics","merchant_name":"Harbor Logistics","amount":"48170.9300","direction":"inflow","category":"Services Revenue"},{"date":"2025-10-05","description":"Invoice — Cedar & Co","merchant_name":"Cedar & Co","amount":"47323.1700","direction":"inflow","category":"Services Revenue"},{"date":"2025-09-07","description":"Invoice — Cedar & Co","merchant_name":"Cedar & Co","amount":"45576.6900","direction":"inflow","category":"Services Revenue"},{"date":"2026-02-03","description":"Invoice — Harbor Logistics","merchant_name":"Harbor Logistics","amount":"45316.7700","direction":"inflow","category":"Services Revenue"},{"date":"2026-05-02","description":"Invoice — Cedar & Co","merchant_name":"Cedar & Co","amount":"45238.4800","direction":"inflow","category":"Services Revenue"},{"date":"2025-08-05","description":"Invoice — Harbor Logistics","merchant_name":"Harbor Logistics","amount":"43408.3100","direction":"inflow","category":"Services Revenue"},{"date":"2026-07-03","description":"Invoice — Cedar & Co","merchant_name":"Cedar & Co","amount":"43004.7200","direction":"inflow","category":"Services Revenue"},{"date":"2025-12-05","description":"Invoice — Cedar & Co","merchant_name":"Cedar & Co","amount":"42116.7400","direction":"inflow","category":"Services Revenue"},{"date":"2026-06-07","description":"Invoice — Cedar & Co","merchant_name":"Cedar & Co","amount":"41654.9500","direction":"inflow","category":"Services Revenue"},{"date":"2026-04-03","description":"Invoice — Cedar & Co","merchant_name":"Cedar & Co","amount":"39564.9100","direction":"inflow","category":"Services Revenue"},{"date":"2025-08-07","description":"Invoice — Cedar & Co","merchant_name":"Cedar & Co","amount":"39262.6500","direction":"inflow","category":"Services Revenue"},{"date":"2026-02-07","description":"Invoice — Cedar & Co","merchant_name":"Cedar & Co","amount":"39119.8200","direction":"inflow","category":"Services Revenue"},{"date":"2026-03-06","description":"Invoice — Cedar & Co","merchant_name":"Cedar & Co","amount":"38431.5500","direction":"inflow","category":"Services Revenue"},{"date":"2025-09-04","description":"Invoice — O'Brien Partners","merchant_name":"O'Brien Partners","amount":"35455.5800","direction":"inflow","category":"Services Revenue"},{"date":"2026-05-03","description":"Invoice — O'Brien Partners","merchant_name":"O'Brien Partners","amount":"35222.5500","direction":"inflow","category":"Services Revenue"},{"date":"2026-04-04","description":"Invoice — O'Brien Partners","merchant_name":"O'Brien Partners","amount":"35153.3500","direction":"inflow","category":"Services Revenue"},{"date":"2025-11-04","description":"Invoice — O'Brien Partners","merchant_name":"O'Brien Partners","amount":"34974.2600","direction":"inflow","category":"Services Revenue"},{"date":"2026-03-04","description":"Invoice — O'Brien Partners","merchant_name":"O'Brien Partners","amount":"34120.4400","direction":"inflow","category":"Services Revenue"},{"date":"2026-06-06","description":"Invoice — O'Brien Partners","merchant_name":"O'Brien Partners","amount":"33809.8600","direction":"inflow","category":"Services Revenue"},{"date":"2026-01-06","description":"Invoice — Cedar & Co","merchant_name":"Cedar & Co","amount":"32336.8700","direction":"inflow","category":"Services Revenue"},{"date":"2025-10-07","description":"Invoice — O'Brien Partners","merchant_name":"O'Brien Partners","amount":"32295.1100","direction":"inflow","category":"Services Revenue"},{"date":"2025-12-05","description":"Invoice — O'Brien Partners","merchant_name":"O'Brien Partners","amount":"31140.4200","direction":"inflow","category":"Services Revenue"},{"date":"2026-07-06","description":"Invoice — O'Brien Partners","merchant_name":"O'Brien Partners","amount":"31108.2400","direction":"inflow","category":"Services Revenue"},{"date":"2025-11-05","description":"Invoice — Northwind Retail","merchant_name":"Northwind Retail","amount":"30910.2900","direction":"inflow","category":"Services Revenue"},{"date":"2025-09-03","description":"Invoice — Northwind Retail","merchant_name":"Northwind Retail","amount":"28991.3600","direction":"inflow","category":"Services Revenue"},{"date":"2026-02-06","description":"Invoice — O'Brien Partners","merchant_name":"O'Brien Partners","amount":"28852.3600","direction":"inflow","category":"Services Revenue"},{"date":"2026-03-04","description":"Invoice — Northwind Retail","merchant_name":"Northwind Retail","amount":"28322.8500","direction":"inflow","category":"Services Revenue"},{"date":"2025-08-04","description":"Invoice — O'Brien Partners","merchant_name":"O'Brien Partners","amount":"27894.1400","direction":"inflow","category":"Services Revenue"},{"date":"2026-07-03","description":"Invoice — Northwind Retail","merchant_name":"Northwind Retail","amount":"27738.7700","direction":"inflow","category":"Services Revenue"},{"date":"2026-01-06","description":"Invoice — O'Brien Partners","merchant_name":"O'Brien Partners","amount":"27595.4400","direction":"inflow","category":"Services Revenue"},{"date":"2025-10-02","description":"Invoice — Northwind Retail","merchant_name":"Northwind Retail","amount":"27111.6900","direction":"inflow","category":"Services Revenue"},{"date":"2026-06-07","description":"Invoice — Northwind Retail","merchant_name":"Northwind Retail","amount":"26319.2400","direction":"inflow","category":"Services Revenue"},{"date":"2026-05-05","description":"Invoice — Northwind Retail","merchant_name":"Northwind Retail","amount":"24942.1400","direction":"inflow","category":"Services Revenue"},{"date":"2025-12-06","description":"Invoice — Northwind Retail","merchant_name":"Northwind Retail","amount":"24623.4100","direction":"inflow","category":"Services Revenue"},{"date":"2026-04-05","description":"Invoice — Northwind Retail","merchant_name":"Northwind Retail","amount":"24547.7500","direction":"inflow","category":"Services Revenue"},{"date":"2026-02-04","description":"Invoice — Northwind Retail","merchant_name":"Northwind Retail","amount":"23340.7000","direction":"inflow","category":"Services Revenue"},{"date":"2026-05-03","description":"Invoice — Lumen Health","merchant_name":"Lumen Health","amount":"23191.8700","direction":"inflow","category":"Services Revenue"},{"date":"2026-04-07","description":"Invoice — Lumen Health","merchant_name":"Lumen Health","amount":"22169.6600","direction":"inflow","category":"Services Revenue"},{"date":"2026-06-06","description":"Invoice — Lumen Health","merchant_name":"Lumen Health","amount":"22123.4900","direction":"inflow","category":"Services Revenue"},{"date":"2025-08-05","description":"Invoice — Northwind Retail","merchant_name":"Northwind Retail","amount":"22108.9800","direction":"inflow","category":"Services Revenue"},{"date":"2025-11-02","description":"Invoice — Lumen Health","merchant_name":"Lumen Health","amount":"22074.0200","direction":"inflow","category":"Services Revenue"},{"date":"2025-10-07","description":"Invoice — Lumen Health","merchant_name":"Lumen Health","amount":"21860.5700","direction":"inflow","category":"Services Revenue"},{"date":"2026-07-06","description":"Invoice — Lumen Health","merchant_name":"Lumen Health","amount":"21466.7100","direction":"inflow","category":"Services Revenue"},{"date":"2026-01-06","description":"Invoice — Northwind Retail","merchant_name":"Northwind Retail","amount":"21322.3700","direction":"inflow","category":"Services Revenue"},{"date":"2025-12-03","description":"Invoice — Lumen Health","merchant_name":"Lumen Health","amount":"20841.8800","direction":"inflow","category":"Services Revenue"},{"date":"2026-03-03","description":"Invoice — Lumen Health","merchant_name":"Lumen Health","amount":"19924.8100","direction":"inflow","category":"Services Revenue"},{"date":"2025-09-02","description":"Invoice — Lumen Health","merchant_name":"Lumen Health","amount":"19625.3400","direction":"inflow","category":"Services Revenue"},{"date":"2026-01-04","description":"Invoice — Lumen Health","merchant_name":"Lumen Health","amount":"19046.5900","direction":"inflow","category":"Services Revenue"},{"date":"2026-02-04","description":"Invoice — Lumen Health","merchant_name":"Lumen Health","amount":"18914.3500","direction":"inflow","category":"Services Revenue"},{"date":"2025-08-03","description":"Invoice — Lumen Health","merchant_name":"Lumen Health","amount":"16734.2900","direction":"inflow","category":"Services Revenue"},{"date":"2025-11-03","description":"Invoice — Pike Street Studio","merchant_name":"Pike Street Studio","amount":"13809.9800","direction":"inflow","category":"Services Revenue"},{"date":"2025-10-06","description":"Invoice — Pike Street Studio","merchant_name":"Pike Street Studio","amount":"13650.0400","direction":"inflow","category":"Services Revenue"},{"date":"2026-05-04","description":"Invoice — Pike Street Studio","merchant_name":"Pike Street Studio","amount":"13246.7500","direction":"inflow","category":"Services Revenue"},{"date":"2026-04-06","description":"Invoice — Pike Street Studio","merchant_name":"Pike Street Studio","amount":"12879.5900","direction":"inflow","category":"Services Revenue"},{"date":"2026-07-03","description":"Invoice — Pike Street Studio","merchant_name":"Pike Street Studio","amount":"12377.8900","direction":"inflow","category":"Services Revenue"},{"date":"2025-12-06","description":"Invoice — Pike Street Studio","merchant_name":"Pike Street Studio","amount":"12110.6300","direction":"inflow","category":"Services Revenue"},{"date":"2025-09-03","description":"Invoice — Pike Street Studio","merchant_name":"Pike Street Studio","amount":"12077.1700","direction":"inflow","category":"Services Revenue"},{"date":"2026-06-02","description":"Invoice — Pike Street Studio","merchant_name":"Pike Street Studio","amount":"11298.3800","direction":"inflow","category":"Services Revenue"},{"date":"2026-02-04","description":"Invoice — Pike Street Studio","merchant_name":"Pike Street Studio","amount":"11079.4700","direction":"inflow","category":"Services Revenue"},{"date":"2026-03-03","description":"Invoice — Pike Street Studio","merchant_name":"Pike Street Studio","amount":"10824.8800","direction":"inflow","category":"Services Revenue"},{"date":"2025-10-03","description":"Invoice — Ridgeline Ventures","merchant_name":"Ridgeline Ventures","amount":"9886.1100","direction":"inflow","category":"Services Revenue"},{"date":"2026-04-07","description":"Invoice — Ridgeline Ventures","merchant_name":"Ridgeline Ventures","amount":"9753.1800","direction":"inflow","category":"Services Revenue"},{"date":"2026-05-02","description":"Invoice — Ridgeline Ventures","merchant_name":"Ridgeline Ventures","amount":"9680.3300","direction":"inflow","category":"Services Revenue"},{"date":"2026-01-04","description":"Invoice — Pike Street Studio","merchant_name":"Pike Street Studio","amount":"9644.0000","direction":"inflow","category":"Services Revenue"},{"date":"2025-09-04","description":"Invoice — Ridgeline Ventures","merchant_name":"Ridgeline Ventures","amount":"9317.2000","direction":"inflow","category":"Services Revenue"},{"date":"2025-08-03","description":"Invoice — Pike Street Studio","merchant_name":"Pike Street Studio","amount":"9304.8300","direction":"inflow","category":"Services Revenue"},{"date":"2026-07-03","description":"Invoice — Ridgeline Ventures","merchant_name":"Ridgeline Ventures","amount":"9034.2000","direction":"inflow","category":"Services Revenue"},{"date":"2025-12-03","description":"Invoice — Ridgeline Ventures","merchant_name":"Ridgeline Ventures","amount":"9004.6900","direction":"inflow","category":"Services Revenue"},{"date":"2025-11-03","description":"Invoice — Ridgeline Ventures","merchant_name":"Ridgeline Ventures","amount":"8904.0900","direction":"inflow","category":"Services Revenue"},{"date":"2026-06-07","description":"Invoice — Ridgeline Ventures","merchant_name":"Ridgeline Ventures","amount":"8825.1800","direction":"inflow","category":"Services Revenue"},{"date":"2026-03-05","description":"Invoice — Ridgeline Ventures","merchant_name":"Ridgeline Ventures","amount":"8319.1200","direction":"inflow","category":"Services Revenue"},{"date":"2026-01-03","description":"Invoice — Ridgeline Ventures","merchant_name":"Ridgeline Ventures","amount":"8150.5000","direction":"inflow","category":"Services Revenue"},{"date":"2025-08-03","description":"Invoice — Ridgeline Ventures","merchant_name":"Ridgeline Ventures","amount":"7920.5000","direction":"inflow","category":"Services Revenue"},{"date":"2026-02-02","description":"Invoice — Ridgeline Ventures","merchant_name":"Ridgeline Ventures","amount":"7035.4600","direction":"inflow","category":"Services Revenue"}],"cogs|2026-07-01|2026-07-31":[{"date":"2026-07-10","description":"Subcontracted design & build — Vertex account","merchant_name":"Contract Studio Partners","amount":"89287.6900","direction":"outflow","category":"Subcontractors"},{"date":"2026-07-20","description":"Amazon Web Services","merchant_name":"Amazon Web Services","amount":"6840.5400","direction":"outflow","category":"Hosting & Infrastructure"},{"date":"2026-07-10","description":"Misc contractor payment","merchant_name":"Contractor Costs - Misc.","amount":"1695.0200","direction":"outflow","category":"Subcontractors"}]}};</script>
+<script>
+// Two data sources, one page.
+//
+// Served live, this fetches from the metric engine. Exported by `npm run export`,
+// the same figures are baked into `window.__SNAPSHOT__` ahead of the script and
+// nothing is fetched at all — which is what makes the export openable from a
+// file:// URL or a static host, with no database behind it. Both paths render
+// through identical code, so a snapshot can't drift from the live product.
+const SNAPSHOT = window.__SNAPSHOT__ ?? null;
+
+const $ = (id) => document.getElementById(id);
+// Function declaration, not a const arrow: render() runs before this point in
+// source order, and a const binding would still be in its temporal dead zone.
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"]/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
+}
+const usd = (minor) => (minor / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+const usdc = (minor) => (minor / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+
+$('theme').onclick = () => {
+  const cur = document.documentElement.getAttribute('data-theme');
+  const sysDark = matchMedia('(prefers-color-scheme: dark)').matches;
+  const now = cur ?? (sysDark ? 'dark' : 'light');
+  document.documentElement.setAttribute('data-theme', now === 'dark' ? 'light' : 'dark');
+  if (window.__data) render(window.__data);
+};
+
+
+async function drill(title, statement, from, to) {
+  $('drill-title').textContent = title;
+  $('drill-body').innerHTML = '<tr><td colspan="4">Loading…</td></tr>';
+  $('drill').showModal();
+  let rows;
+  if (SNAPSHOT) {
+    rows = SNAPSHOT.drilldowns[`${statement}|${from}|${to}`] ?? [];
+  } else {
+    const p = new URLSearchParams({ from, to });
+    if (statement) p.set('statement', statement);
+    rows = (await (await fetch('/api/drilldown?' + p)).json()).rows;
+  }
+  $('drill-body').innerHTML = rows.map((row) => `<tr>
+    <td class="num">${row.date}</td>
+    <td>${escapeHtml(row.description ?? row.merchant_name ?? '—')}</td>
+    <td>${escapeHtml(row.category)}</td>
+    <td class="n">${usdc(Math.round(Number(row.amount) * 100))}</td></tr>`).join('')
+    || '<tr><td colspan="4">No transactions</td></tr>';
+}
+window.__drill = drill;
+
+function render(d) {
+  $('orgname').textContent = d.org.name;
+  // A green dot next to a timestamp is a liveness claim. In an export nothing is
+  // live, so it says what it actually is and drops the status colour with it.
+  $('fresh').textContent = SNAPSHOT
+    ? 'Snapshot · ' + new Date(d.asOf).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    : 'Updated ' + new Date(d.asOf).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  if (SNAPSHOT) document.querySelector('.fresh .dot').style.background = 'var(--text-muted)';
+
+  const m = d.metrics;
+  const marginDelta = (m.margin.value !== null && m.marginPrior.value !== null)
+    ? m.margin.value - m.marginPrior.value : null;
+  const risk = d.forecast.riskEvents[0];
+
+  // The answer bar: sentences first, charts later. This is the central product
+  // bet (prd.md §2.1) — the user came here because they can't interpret charts.
+  const headline = risk
+    ? `Cash is ${m.runway.value !== null ? `about ${m.runway.value} months of runway` : 'holding steady'}. One thing needs you.`
+    : `Cash is healthy${m.runway.value !== null ? ` — about ${m.runway.value} months of runway` : ''}. Nothing needs you today.`;
+
+  const secondary = risk
+    ? `<b>${risk.headline}</b> ${escapeHtml(risk.drivers[0] ?? '')}`
+    : `Revenue over the last 12 months is ${usd(m.revenue.value ?? 0)}, with ${usd(m.profit.value ?? 0)} in net profit.`;
+
+  $('page').innerHTML = `
+    <div class="note">${SNAPSHOT
+      ? `<b>Snapshot, not a live app.</b> These figures were computed on
+         ${new Date(d.asOf).toLocaleDateString('en-US', { dateStyle: 'long' })} and frozen into this
+         page — there is no database behind it and nothing here updates. The business is synthetic:
+         a 22-person agency generated to have realistically messy books.`
+      : `<b>Live demo.</b> Every figure below is computed on request by the metric engine.`}
+      All of it came from ${d.series.length} months of transactions pulled through the real ingestion
+      pipeline — fake QuickBooks server, real adapter, archive, checkpoints, and normalization.
+      <b>Click Cash, Revenue, or Gross margin</b> to see the source transactions behind them.</div>
+
+    <h1 class="greet">Good morning, Dana.</h1>
+
+    <section class="answerbar">
+      <p class="lead">${headline}</p>
+      <p style="color:var(--text-secondary)">${secondary}</p>
+    </section>
+
+    <section class="tiles">
+      ${tile('Cash', usd(m.cash.value ?? 0), null, m.cash, 'asset')}
+      ${tile('Runway', m.runway.value !== null ? m.runway.value + ' mo' : '—', null, m.runway, null, m.runway.reason)}
+      ${tile('Revenue <span style="color:var(--text-muted)">TTM</span>', usd(m.revenue.value ?? 0), null, m.revenue, 'revenue')}
+      ${tile('Gross margin', m.margin.value !== null ? m.margin.value.toFixed(1) + '%' : '—',
+             marginDelta, m.margin, 'cogs')}
+    </section>
+
+    <section class="card" id="forecast">
+      <div class="card-h"><h2>Cash forecast</h2><span class="sp"></span>
+        <span style="font-size:12.5px;color:var(--text-muted)">13 weeks · ${d.forecast.confidence} confidence</span></div>
+      <div id="chart"></div>
+      <div class="legend">
+        <span><i class="sw" style="background:var(--s1)"></i> Projected (P50)</span>
+        <span><i class="sw band"></i> P10–P90 range</span>
+        <span><i class="sw" style="background:var(--text-muted);opacity:.6"></i> Payroll floor</span>
+      </div>
+      ${d.forecast.riskEvents.map((r) => `
+        <div class="risk">
+          <span class="glyph ${r.severity === 'critical' ? 'crit' : 'warn'}">${r.severity === 'critical' ? '!' : '•'}</span>
+          <span style="flex:1"><b>${escapeHtml(r.headline)}</b>
+            <span style="color:var(--text-secondary)">— ${escapeHtml(r.drivers[0] ?? '')}</span></span>
+          <span class="pill ${r.severity === 'critical' ? 'crit' : 'warn'}">${r.severity}</span>
+        </div>`).join('')
+        || '<div class="risk"><span class="glyph warn">✓</span><span style="flex:1;color:var(--text-secondary)">No cash risks detected in the next 13 weeks.</span></div>'}
+    </section>
+
+    ${risk ? `
+    <section class="alert">
+      <div class="hd"><span>⚠</span> ${risk.severity} · ${risk.daysAway} days out</div>
+      <h3>${escapeHtml(risk.headline)}</h3>
+      <p class="why">${escapeHtml(risk.drivers.join(' '))}
+        Projected shortfall of <b>${usdc(risk.shortfallMinor)}</b> at the midpoint of the forecast range.</p>
+      <div class="opts">
+        ${risk.actions.map((a) => `<div class="opt"><span class="t">${escapeHtml(a.text)}</span>
+          ${a.impactMinor > 0 ? `<span class="amt num">+${usd(a.impactMinor)}</span>` : ''}</div>`).join('')}
+      </div>
+    </section>` : ''}
+
+    <div class="grid2">
+      <section class="card" id="profit">
+        <div class="card-h"><h2>Revenue &amp; profit</h2></div>
+        <div id="pchart"></div>
+      </section>
+
+      <section class="card" id="customers">
+        <div class="card-h"><h2>Revenue by customer</h2><span class="sp"></span>
+          ${d.concentration && d.concentration.share > 0.3
+            ? `<span class="pill warn">${Math.round(d.concentration.share * 100)}% concentration</span>` : ''}</div>
+        <div class="card-b"><table class="tbl"><tbody>
+          ${d.breakdowns.byCustomer.slice(0, 8).map((c) => `<tr>
+            <td>${escapeHtml(c.label)}</td>
+            <td style="width:40%"><div class="bar" style="width:${Math.round(c.share * 100)}%"></div></td>
+            <td class="n">${usd(c.value)}</td>
+            <td class="n" style="color:var(--text-muted)">${Math.round(c.share * 100)}%</td></tr>`).join('')}
+        </tbody></table></div>
+      </section>
+    </div>
+
+    <div class="grid2">
+      <section class="card" id="expenses">
+        <div class="card-h"><h2>Expenses by category</h2><span class="sp"></span>
+          <span style="font-size:12.5px;color:var(--text-muted)">trailing 12 months</span></div>
+        <div class="card-b"><table class="tbl"><tbody>
+          ${d.breakdowns.byCategory.slice(0, 9).map((c) => `<tr>
+            <td>${escapeHtml(c.label)}</td>
+            <td style="width:35%"><div class="bar" style="width:${Math.round(c.share * 100)}%;background:var(--s3)"></div></td>
+            <td class="n">${usd(c.value)}</td></tr>`).join('')}
+        </tbody></table></div>
+      </section>
+
+      <section class="card">
+        <div class="card-h"><h2>What changed</h2><span class="sp"></span>
+          <span style="font-size:12.5px;color:var(--text-muted)">last 30 days vs prior 30</span></div>
+        <div class="card-b"><table class="tbl">
+          <thead><tr><th>Category</th><th class="n">Last 30 days</th><th class="n">Change</th></tr></thead>
+          <tbody>${d.drivers.map((dr) => `<tr>
+            <td>${escapeHtml(dr.label)}</td>
+            <td class="n">${usd(dr.currentMinor)}</td>
+            <td class="n ${dr.deltaMinor > 0 ? 'down' : 'up'}">${dr.deltaMinor > 0 ? '▲' : '▼'} ${usd(Math.abs(dr.deltaMinor))}</td>
+          </tr>`).join('')}</tbody>
+        </table></div>
+      </section>
+    </div>
+
+    <section class="card">
+      <div class="card-h"><h2>Accounts receivable</h2></div>
+      <div class="card-b"><table class="tbl">
+        <thead><tr><th>Age</th><th class="n">Invoices</th><th class="n">Outstanding</th></tr></thead>
+        <tbody>${d.breakdowns.aging.map((b) => `<tr>
+          <td>${b.bucket}</td><td class="n">${b.count}</td>
+          <td class="n ${b.bucket.startsWith('9') || b.bucket.startsWith('61') ? 'down' : ''}">${usd(b.minorUnits)}</td>
+        </tr>`).join('')}</tbody>
+      </table></div>
+    </section>
+
+    <section class="card">
+      <div class="card-h"><h2>Assumptions behind the forecast</h2></div>
+      <div class="card-b"><table class="tbl"><tbody>
+        ${d.forecast.assumptions.map((a) => `<tr>
+          <td style="width:26%"><b>${escapeHtml(a.label)}</b></td>
+          <td class="num" style="width:22%">${escapeHtml(a.value)}</td>
+          <td style="color:var(--text-secondary)">${escapeHtml(a.description)}</td></tr>`).join('')}
+      </tbody></table></div>
+    </section>`;
+
+  drawForecast(d);
+  drawProfit(d);
+}
+
+function tile(label, value, delta, metric, statement, reason) {
+  const period = metric.period;
+  const onclick = statement
+    ? `window.__drill('${label.replace(/<[^>]*>/g,'')}','${statement}','${period.start}','${period.end}')`
+    : '';
+  return `<button class="tile" ${onclick ? `onclick="${onclick}"` : ''}>
+    <div class="lbl">${label}</div>
+    <div class="val num">${value}</div>
+    ${delta !== null && delta !== undefined
+      ? `<div class="chg num ${delta >= 0 ? 'up' : 'down'}">${delta >= 0 ? '▲' : '▼'} ${Math.abs(delta).toFixed(1)} pts vs last month</div>`
+      : '<div class="chg" style="color:var(--text-muted)">&nbsp;</div>'}
+    <div class="meta">${metric.confidence.replace('_',' ')} confidence${reason ? ' · ' + reason : ''}</div>
+  </button>`;
+}
+
+function tok(n) {
+  return getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+}
+
+function drawForecast(d) {
+  const pts = d.forecast.points;
+  if (!pts.length) return;
+  const W = 960, H = 300, M = { t: 20, r: 70, b: 34, l: 62 };
+  // Scale to the data, not to zero. Forcing zero into the domain squeezed the
+  // entire series into the top fifth of the plot and made the P10-P90 band
+  // invisible. Zero is included only when the projection actually approaches it,
+  // which is when its position genuinely matters.
+  const all = pts.flatMap((p) => [p.p10, p.p90]).concat([d.forecast.startingCashMinor]);
+  let min = Math.min(...all), max = Math.max(...all);
+  if (min > 0 && min < max * 0.25) min = 0;
+  const pad = Math.max((max - min) * 0.15, max * 0.02);
+  const lo = min - pad, hi = max + pad;
+  const X = (i) => M.l + (i / (pts.length - 1)) * (W - M.l - M.r);
+  const Y = (v) => H - M.b - ((v - lo) / (hi - lo)) * (H - M.t - M.b);
+
+  // Payroll floor: the reference line that answers "will I make payroll?"
+  // geometrically, before the user reads a single number.
+  const payrollRisk = d.forecast.riskEvents.find((r) => r.kind === 'payroll_shortfall');
+  const floor = payrollRisk ? payrollRisk.shortfallMinor + pts[pts.findIndex((p) => p.date === payrollRisk.date)]?.p50 : null;
+
+  const c = { s1: tok('--s1'), grid: tok('--border-subtle'), muted: tok('--text-muted'),
+              crit: tok('--critical'), surf: tok('--surface-1') };
+
+  const band = pts.map((p, i) => `${X(i).toFixed(1)},${Y(p.p90).toFixed(1)}`).join(' L')
+    + ' L' + [...pts].reverse().map((p, i) => `${X(pts.length - 1 - i).toFixed(1)},${Y(p.p10).toFixed(1)}`).join(' L');
+  const line = pts.map((p, i) => `${i ? 'L' : 'M'}${X(i).toFixed(1)},${Y(p.p50).toFixed(1)}`).join(' ');
+
+  let grid = '';
+  for (let i = 0; i <= 4; i++) {
+    const v = lo + ((hi - lo) / 4) * i, y = Y(v);
+    grid += `<line x1="${M.l}" y1="${y}" x2="${W - M.r}" y2="${y}" stroke="${c.grid}"/>
+      <text x="${M.l - 10}" y="${y + 4}" text-anchor="end" font-size="11" fill="${c.muted}"
+        style="font-variant-numeric:tabular-nums">${(v / 100 / 1000).toFixed(0)}k</text>`;
+  }
+
+  let months = '';
+  let lastMonth = '';
+  pts.forEach((p, i) => {
+    const mo = p.date.slice(0, 7);
+    if (mo !== lastMonth) {
+      lastMonth = mo;
+      months += `<text x="${X(i)}" y="${H - 12}" text-anchor="middle" font-size="11" fill="${c.muted}">
+        ${new Date(p.date + 'T00:00:00Z').toLocaleString('en', { month: 'short', timeZone: 'UTC' })}</text>`;
+    }
+  });
+
+  let riskMarks = '';
+  for (const r of d.forecast.riskEvents) {
+    const i = pts.findIndex((p) => p.date === r.date);
+    if (i < 0) continue;
+    riskMarks += `<circle cx="${X(i)}" cy="${Y(pts[i].p50)}" r="5" fill="${c.crit}" stroke="${c.surf}" stroke-width="2"/>
+      <text x="${X(i)}" y="${Y(pts[i].p50) + 22}" text-anchor="middle" font-size="10.5" font-weight="600" fill="${c.crit}">
+        ${new Date(r.date + 'T00:00:00Z').toLocaleString('en', { month: 'short', day: 'numeric', timeZone: 'UTC' })}</text>`;
+  }
+
+  document.getElementById('chart').innerHTML = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img"
+    aria-label="Cash forecast over the next 13 weeks with a P10 to P90 confidence band">
+    ${grid}
+    ${floor !== null ? `<line x1="${M.l}" y1="${Y(floor)}" x2="${W - M.r}" y2="${Y(floor)}"
+      stroke="${c.muted}" stroke-width="1.5" stroke-dasharray="2 4" opacity=".75"/>
+      <text x="${W - M.r + 8}" y="${Y(floor) + 4}" font-size="10.5" fill="${c.muted}">payroll</text>` : ''}
+    <path d="M${band} Z" fill="${c.s1}" opacity=".16"/>
+    <path d="${line}" fill="none" stroke="${c.s1}" stroke-width="2" stroke-dasharray="5 4" stroke-linecap="round"/>
+    ${riskMarks}${months}
+    <text x="${X(pts.length - 1) + 8}" y="${Y(pts[pts.length - 1].p50) + 4}" font-size="11.5" font-weight="600"
+      fill="${c.s1}" style="font-variant-numeric:tabular-nums">${usd(pts[pts.length - 1].p50)}</text>
+  </svg>`;
+}
+
+function drawProfit(d) {
+  const s = d.series.slice(-18);
+  if (!s.length) return;
+  const W = 560, H = 240, M = { t: 16, r: 16, b: 30, l: 54 };
+  const max = Math.max(...s.map((p) => Math.max(p.revenue, p.opex + p.cogs)));
+  const X = (i) => M.l + (i / s.length) * (W - M.l - M.r);
+  const bw = ((W - M.l - M.r) / s.length) * 0.42;
+  const Y = (v) => H - M.b - (v / max) * (H - M.t - M.b);
+  const c = { s1: tok('--s1'), s3: tok('--s3'), grid: tok('--border-subtle'), muted: tok('--text-muted') };
+
+  let bars = '';
+  s.forEach((p, i) => {
+    // 2px surface gap between adjacent bars, per the mark specs.
+    bars += `<rect x="${X(i)}" y="${Y(p.revenue)}" width="${bw}" height="${H - M.b - Y(p.revenue)}"
+       fill="${c.s1}" rx="3"><title>${p.month} revenue ${usd(p.revenue)}</title></rect>
+     <rect x="${X(i) + bw + 2}" y="${Y(p.cogs + p.opex)}" width="${bw}" height="${H - M.b - Y(p.cogs + p.opex)}"
+       fill="${c.s3}" rx="3"><title>${p.month} costs ${usd(p.cogs + p.opex)}</title></rect>`;
+  });
+
+  let labels = '';
+  s.forEach((p, i) => {
+    if (i % 3 === 0) labels += `<text x="${X(i) + bw}" y="${H - 10}" text-anchor="middle" font-size="10" fill="${c.muted}">${p.month.slice(2)}</text>`;
+  });
+
+  document.getElementById('pchart').innerHTML = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img"
+    aria-label="Monthly revenue against total costs for the last 18 months">
+    <line x1="${M.l}" y1="${H - M.b}" x2="${W - M.r}" y2="${H - M.b}" stroke="${c.grid}"/>
+    ${bars}${labels}
+    <text x="${M.l - 8}" y="${Y(max) + 4}" text-anchor="end" font-size="10" fill="${c.muted}">${usd(max)}</text>
+  </svg>
+  <div class="legend" style="padding:0 20px 16px">
+    <span><i class="sw" style="background:var(--s1)"></i> Revenue</span>
+    <span><i class="sw" style="background:var(--s3)"></i> Costs</span></div>`;
+}
+
+
+// Charts read their colours from computed CSS custom properties, so they have to
+// be redrawn when the theme changes. The button above handles our own toggle;
+// this catches a host page (an embed, an artifact viewer) stamping data-theme on
+// the root element, which would otherwise leave the SVGs in the old palette.
+new MutationObserver(() => { if (window.__data) render(window.__data); })
+  .observe(document.documentElement, { attributeFilter: ['data-theme'] });
+
+// ── bootstrap ───────────────────────────────────────────────────────────────
+// Last, deliberately: every helper above is defined by the time this runs.
+void (async () => {
+  if (SNAPSHOT) {
+    window.__data = SNAPSHOT.dashboard;
+    render(SNAPSHOT.dashboard);
+    return;
+  }
+  const res = await fetch('/api/dashboard');
+  if (!res.ok) {
+    $('page').innerHTML = `<div class="loading">${(await res.json()).error}</div>`;
+    return;
+  }
+  const data = await res.json();
+  window.__data = data;
+  render(data);
+})();
+</script>
+</body>
+</html>

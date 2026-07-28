@@ -150,7 +150,19 @@ border:1px solid var(--border-strong);background:var(--surface-1);color:var(--te
   <div class="dlg-b"><table class="tbl"><thead><tr><th>Date</th><th>Description</th><th>Category</th><th class="n">Amount</th></tr></thead><tbody id="drill-body"></tbody></table></div>
 </dialog>
 
-<script type="module">
+<!-- A classic script, not type="module". The exported snapshot has to open from a
+     file:// URL, and browsers treat file:// pages as an opaque origin, which makes
+     module scripts a portability gamble for no benefit — nothing here imports. -->
+<script>
+// Two data sources, one page.
+//
+// Served live, this fetches from the metric engine. Exported by `npm run export`,
+// the same figures are baked into `window.__SNAPSHOT__` ahead of the script and
+// nothing is fetched at all — which is what makes the export openable from a
+// file:// URL or a static host, with no database behind it. Both paths render
+// through identical code, so a snapshot can't drift from the live product.
+const SNAPSHOT = window.__SNAPSHOT__ ?? null;
+
 const $ = (id) => document.getElementById(id);
 // Function declaration, not a const arrow: render() runs before this point in
 // source order, and a const binding would still be in its temporal dead zone.
@@ -173,10 +185,14 @@ async function drill(title, statement, from, to) {
   $('drill-title').textContent = title;
   $('drill-body').innerHTML = '<tr><td colspan="4">Loading…</td></tr>';
   $('drill').showModal();
-  const p = new URLSearchParams({ from, to });
-  if (statement) p.set('statement', statement);
-  const r = await fetch('/api/drilldown?' + p);
-  const { rows } = await r.json();
+  let rows;
+  if (SNAPSHOT) {
+    rows = SNAPSHOT.drilldowns[`${statement}|${from}|${to}`] ?? [];
+  } else {
+    const p = new URLSearchParams({ from, to });
+    if (statement) p.set('statement', statement);
+    rows = (await (await fetch('/api/drilldown?' + p)).json()).rows;
+  }
   $('drill-body').innerHTML = rows.map((row) => `<tr>
     <td class="num">${row.date}</td>
     <td>${escapeHtml(row.description ?? row.merchant_name ?? '—')}</td>
@@ -188,7 +204,12 @@ window.__drill = drill;
 
 function render(d) {
   $('orgname').textContent = d.org.name;
-  $('fresh').textContent = 'Updated ' + new Date(d.asOf).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  // A green dot next to a timestamp is a liveness claim. In an export nothing is
+  // live, so it says what it actually is and drops the status colour with it.
+  $('fresh').textContent = SNAPSHOT
+    ? 'Snapshot · ' + new Date(d.asOf).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    : 'Updated ' + new Date(d.asOf).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  if (SNAPSHOT) document.querySelector('.fresh .dot').style.background = 'var(--text-muted)';
 
   const m = d.metrics;
   const marginDelta = (m.margin.value !== null && m.marginPrior.value !== null)
@@ -206,10 +227,15 @@ function render(d) {
     : `Revenue over the last 12 months is ${usd(m.revenue.value ?? 0)}, with ${usd(m.profit.value ?? 0)} in net profit.`;
 
   $('page').innerHTML = `
-    <div class="note"><b>Live demo.</b> Every figure below is computed by the metric engine from
-      ${d.series.reduce((s,p)=>s+1,0)} months of transactions that went through the real ingestion
+    <div class="note">${SNAPSHOT
+      ? `<b>Snapshot, not a live app.</b> These figures were computed on
+         ${new Date(d.asOf).toLocaleDateString('en-US', { dateStyle: 'long' })} and frozen into this
+         page — there is no database behind it and nothing here updates. The business is synthetic:
+         a 22-person agency generated to have realistically messy books.`
+      : `<b>Live demo.</b> Every figure below is computed on request by the metric engine.`}
+      All of it came from ${d.series.length} months of transactions pulled through the real ingestion
       pipeline — fake QuickBooks server, real adapter, archive, checkpoints, and normalization.
-      <b>Click any figure</b> to see the source transactions behind it.</div>
+      <b>Click Cash, Revenue, or Gross margin</b> to see the source transactions behind them.</div>
 
     <h1 class="greet">Good morning, Dana.</h1>
 
@@ -453,16 +479,30 @@ function drawProfit(d) {
 }
 
 
+// Charts read their colours from computed CSS custom properties, so they have to
+// be redrawn when the theme changes. The button above handles our own toggle;
+// this catches a host page (an embed, an artifact viewer) stamping data-theme on
+// the root element, which would otherwise leave the SVGs in the old palette.
+new MutationObserver(() => { if (window.__data) render(window.__data); })
+  .observe(document.documentElement, { attributeFilter: ['data-theme'] });
+
 // ── bootstrap ───────────────────────────────────────────────────────────────
 // Last, deliberately: every helper above is defined by the time this runs.
-const res = await fetch('/api/dashboard');
-if (!res.ok) {
-  $('page').innerHTML = `<div class="loading">${(await res.json()).error}</div>`;
-} else {
+void (async () => {
+  if (SNAPSHOT) {
+    window.__data = SNAPSHOT.dashboard;
+    render(SNAPSHOT.dashboard);
+    return;
+  }
+  const res = await fetch('/api/dashboard');
+  if (!res.ok) {
+    $('page').innerHTML = `<div class="loading">${(await res.json()).error}</div>`;
+    return;
+  }
   const data = await res.json();
   window.__data = data;
   render(data);
-}
+})();
 </script>
 </body>
 </html>
