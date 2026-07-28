@@ -10,12 +10,8 @@ import {
 import { startFakeQbo } from '@ledgeriq/connectors/test-helpers';
 import { generateAgency } from '@ledgeriq/seed';
 import {
-  normalizeAccounts,
-  normalizeExpenses,
-  normalizeInvoices,
-  normalizePayments,
+  normalizeQuickBooksBusiness,
   TRANSFORM_VERSION,
-  type StatementClass,
 } from '@ledgeriq/normalize';
 import {
   withTenant,
@@ -182,46 +178,17 @@ async function normalizeFromArchive(
     byType.set(recordType, records);
   }
 
-  const { accounts } = normalizeAccounts(byType.get('Account') ?? []);
-  const statementBySourceId = new Map<string, StatementClass | null>(
-    accounts.map((a) => [a.sourceAccountId, a.statement]),
-  );
-  const nameBySourceId = new Map(accounts.map((a) => [a.sourceAccountId, a.name]));
-  const categoryBySourceId = new Map(accounts.map((a) => [a.sourceAccountId, a.categoryKey]));
-  const lookup = {
-    statementFor: (id: string) => statementBySourceId.get(id) ?? null,
-    nameFor: (id: string) => nameBySourceId.get(id) ?? null,
-    categoryKeyFor: (id: string) => categoryBySourceId.get(id) ?? null,
-  };
-
-  const invoiceResult = normalizeInvoices(byType.get('Invoice') ?? []);
-  const paymentResult = normalizePayments(byType.get('Payment') ?? []);
-  const purchaseResult = normalizeExpenses(byType.get('Purchase') ?? [], 'Purchase', lookup);
-  const billResult = normalizeExpenses(byType.get('Bill') ?? [], 'Bill', lookup);
-
-  const customerRecords = (byType.get('Customer') ?? []).map((raw) => {
-    const c = raw as { Id?: string; DisplayName?: string; PrimaryEmailAddr?: { Address?: string } };
-    return {
-      sourceId: c.Id ?? '',
-      name: c.DisplayName ?? 'Unknown',
-      ...(c.PrimaryEmailAddr?.Address ? { email: c.PrimaryEmailAddr.Address } : {}),
-    };
-  }).filter((c) => c.sourceId);
+  const canonical = normalizeQuickBooksBusiness(byType);
 
   return withTenant(config.pool, ctx, async (db) => {
-    const ledgerMap = await canonicalRepo.upsertLedgerAccounts(db, accounts);
-    const customerMap = await canonicalRepo.upsertCustomers(db, customerRecords);
+    const ledgerMap = await canonicalRepo.upsertLedgerAccounts(db, canonical.accounts);
+    const customerMap = await canonicalRepo.upsertCustomers(db, canonical.customers);
     const categoryMap = await canonicalRepo.loadCategoryMap(db);
 
-    await canonicalRepo.upsertInvoices(db, invoiceResult.invoices, customerMap);
+    await canonicalRepo.upsertInvoices(db, canonical.invoices, customerMap);
     await canonicalRepo.upsertTransactions(
       db,
-      [
-        ...invoiceResult.transactions,
-        ...paymentResult.transactions,
-        ...purchaseResult.transactions,
-        ...billResult.transactions,
-      ],
+      canonical.transactions,
       { ledgerAccounts: ledgerMap, customers: customerMap, categories: categoryMap },
       TRANSFORM_VERSION,
     );

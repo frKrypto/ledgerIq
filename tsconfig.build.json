@@ -20,6 +20,9 @@
       "path": "packages/metrics"
     },
     {
+      "path": "packages/reconcile"
+    },
+    {
       "path": "packages/db"
     },
     {

@@ -299,6 +299,8 @@ export const ledgerAccounts = pgTable('ledger_accounts', {
   statement: statementClass('statement'),
   mappingConfidence: numeric('mapping_confidence'),
   needsReview: boolean('needs_review').notNull().default(false),
+  /** Where we think it belongs when we disagree with the books. See 0008. */
+  suggestedStatement: statementClass('suggested_statement'),
   isActive: boolean('is_active').notNull().default(true),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });

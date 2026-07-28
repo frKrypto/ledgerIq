@@ -35,6 +35,11 @@ export interface CanonicalAccount {
   readonly categoryKey: string;
   readonly mappingConfidence: number;
   readonly needsReview: boolean;
+  /**
+   * Where we suspect this account belongs, when we disagree with how the
+   * business classified it. Never applied silently — see mapAccountToStatement.
+   */
+  readonly suggestedStatement: StatementClass | null;
 }
 
 export interface CanonicalTransaction {
@@ -69,7 +74,13 @@ export interface CanonicalInvoice {
 }
 
 export interface NormalizationWarning {
-  readonly kind: 'unmapped_account' | 'ambiguous_account' | 'missing_field' | 'unparseable_amount';
+  readonly kind:
+    | 'unmapped_account'
+    | 'ambiguous_account'
+    | 'missing_field'
+    | 'unparseable_amount'
+    /** Line amounts do not sum to the document total — usually tax or shipping. */
+    | 'amount_mismatch';
   readonly detail: string;
   readonly sourceId?: string;
 }
@@ -90,7 +101,7 @@ export function mapAccountToStatement(account: {
   AccountType?: string;
   AccountSubType?: string;
   Name?: string;
-}): { statement: StatementClass | null; confidence: number } {
+}): { statement: StatementClass | null; confidence: number; suggested?: StatementClass } {
   const type = (account.AccountType ?? '').toLowerCase();
   const subtype = (account.AccountSubType ?? '').toLowerCase();
   const name = (account.Name ?? '').toLowerCase();
@@ -125,8 +136,22 @@ export function mapAccountToStatement(account: {
     if (/subcontract|contractor|freelance/.test(name)) {
       // The genuinely ambiguous case: subcontractor cost is COGS if it is
       // billable project work and overhead if it is not, and the account name
-      // alone cannot distinguish them. Low confidence, flagged for review.
-      return { statement: 'cogs', confidence: 0.55 };
+      // alone cannot distinguish them.
+      //
+      // This used to answer 'cogs' and it was wrong — not about accounting, but
+      // about authority. The business put this account under Expense, and
+      // reclassifying it silently means our P&L stops matching the P&L they can
+      // pull from QuickBooks themselves. "Your gross margin is 65%" against their
+      // own books saying 61% does not read as insight; it reads as a bug, and it
+      // is unarguable because they have the source system open.
+      //
+      // The reconciliation harness caught exactly this: a $12,979 COGS
+      // divergence with no code defect behind it.
+      //
+      // So the source system wins on classification, and the disagreement becomes
+      // a question to ask during chart-of-accounts confirmation rather than a
+      // number changed behind the user's back.
+      return { statement: 'opex', confidence: 0.55, suggested: 'cogs' };
     }
     if (/tax/.test(name)) return { statement: 'other_expense', confidence: 0.75 };
     if (/interest/.test(name)) return { statement: 'other_expense', confidence: 0.8 };
@@ -203,7 +228,7 @@ export function normalizeAccounts(records: unknown[]): {
       continue;
     }
 
-    const { statement, confidence } = mapAccountToStatement(a);
+    const { statement, confidence, suggested } = mapAccountToStatement(a);
     const needsReview = statement === null || confidence < CONFIDENCE_REVIEW_THRESHOLD;
 
     if (statement === null) {
@@ -215,7 +240,9 @@ export function normalizeAccounts(records: unknown[]): {
     } else if (needsReview) {
       warnings.push({
         kind: 'ambiguous_account',
-        detail: `"${a.Name ?? a.Id}" mapped to ${statement} at ${Math.round(confidence * 100)}% — needs confirmation`,
+        detail:
+          `"${a.Name ?? a.Id}" kept as ${statement} at ${Math.round(confidence * 100)}%` +
+          (suggested ? ` — may belong in ${suggested}; confirm with the owner` : ' — needs confirmation'),
         sourceId: a.Id,
       });
     }
@@ -229,6 +256,7 @@ export function normalizeAccounts(records: unknown[]): {
       categoryKey: mapAccountToCategory(a, statement),
       mappingConfidence: confidence,
       needsReview,
+      suggestedStatement: suggested ?? null,
     });
   }
 
@@ -466,25 +494,96 @@ export function normalizeInvoices(records: unknown[]): {
         : null,
     });
 
-    transactions.push({
-      sourceTxnId: inv.Id,
-      sourceRecordType: 'Invoice',
-      direction: 'inflow',
-      amountMinor: total,
-      occurredAt: inv.TxnDate,
-      // Accrual revenue: recognized when invoiced, not when paid. postedAt is
-      // null because no cash has moved.
-      postedAt: null,
-      description: inv.CustomerRef?.name ? `Invoice — ${inv.CustomerRef.name}` : 'Invoice',
-      merchantName: inv.CustomerRef?.name ?? null,
-      sourceAccountId: null,
-      sourceCustomerId: inv.CustomerRef?.value ?? null,
-      statement: 'revenue',
-      categoryKey: 'revenue.services',
-      categorySource: 'source_system',
-      categoryConfidence: 0.95,
-      isTransfer: false,
-    });
+    // Revenue is recognized per LINE, against the income account each line names.
+    //
+    // Collapsing an invoice to one TotalAmt transaction with no account was the
+    // original behaviour, and the reconciliation harness caught what it costs:
+    // every dollar of revenue landed as "(unmapped)". Section totals still
+    // agreed, so nothing looked wrong — but revenue could not be split by income
+    // account at all, which on a business with several revenue streams is most of
+    // the question being asked.
+    //
+    // It also fixes a correctness bug that the demo's single-line invoices hide:
+    // TotalAmt includes sales tax, and sales tax is a liability, not revenue.
+    const lines = Array.isArray((raw as { Line?: unknown[] }).Line)
+      ? ((raw as { Line: unknown[] }).Line)
+      : [];
+
+    let recognized = 0;
+    let lineIndex = 0;
+
+    for (const rawLine of lines) {
+      const line = rawLine as {
+        Id?: string; Amount?: number; DetailType?: string;
+        Description?: string;
+        SalesItemLineDetail?: { ItemAccountRef?: { value?: string; name?: string } };
+      };
+      lineIndex += 1;
+
+      const accountRef = line.SalesItemLineDetail?.ItemAccountRef?.value;
+      if (accountRef === undefined) continue; // tax, discount, subtotal — not revenue
+
+      const amount = parseAmount(line.Amount, warnings, inv.Id);
+      if (amount === null) continue;
+      recognized += amount;
+
+      transactions.push({
+        sourceTxnId: `${inv.Id}:${line.Id ?? lineIndex}`,
+        sourceRecordType: 'Invoice',
+        direction: 'inflow',
+        amountMinor: amount,
+        occurredAt: inv.TxnDate,
+        // Accrual revenue: recognized when invoiced, not when paid. postedAt is
+        // null because no cash has moved.
+        postedAt: null,
+        description: line.Description
+          ?? (inv.CustomerRef?.name ? `Invoice — ${inv.CustomerRef.name}` : 'Invoice'),
+        merchantName: inv.CustomerRef?.name ?? null,
+        sourceAccountId: accountRef,
+        sourceCustomerId: inv.CustomerRef?.value ?? null,
+        statement: 'revenue',
+        categoryKey: 'revenue.services',
+        categorySource: 'source_system',
+        categoryConfidence: 0.95,
+        isTransfer: false,
+      });
+    }
+
+    if (recognized === 0) {
+      // No line named an income account. Rather than drop the revenue, fall back
+      // to the invoice total and say so — an unmapped dollar is recoverable, a
+      // missing one is not.
+      warnings.push({
+        kind: 'unmapped_account',
+        detail: `Invoice ${inv.Id} has no income-account line; recognized against no account`,
+      });
+      transactions.push({
+        sourceTxnId: inv.Id,
+        sourceRecordType: 'Invoice',
+        direction: 'inflow',
+        amountMinor: total,
+        occurredAt: inv.TxnDate,
+        postedAt: null,
+        description: inv.CustomerRef?.name ? `Invoice — ${inv.CustomerRef.name}` : 'Invoice',
+        merchantName: inv.CustomerRef?.name ?? null,
+        sourceAccountId: null,
+        sourceCustomerId: inv.CustomerRef?.value ?? null,
+        statement: 'revenue',
+        categoryKey: 'revenue.services',
+        categorySource: 'source_system',
+        categoryConfidence: 0.95,
+        isTransfer: false,
+      });
+    } else if (recognized !== total) {
+      // Expected on real books — sales tax and shipping live in TotalAmt but are
+      // not revenue. Recorded so the gap is visible rather than surprising.
+      warnings.push({
+        kind: 'amount_mismatch',
+        detail:
+          `Invoice ${inv.Id}: income lines total ${recognized} against TotalAmt ${total}; ` +
+          `the difference is tax or other non-revenue and is not recognized as income`,
+      });
+    }
   }
 
   return { invoices, transactions, warnings };

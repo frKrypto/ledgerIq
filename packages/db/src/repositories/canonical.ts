@@ -48,6 +48,7 @@ export async function upsertLedgerAccounts(
         statement: a.statement,
         mappingConfidence: String(a.mappingConfidence),
         needsReview: a.needsReview,
+        suggestedStatement: a.suggestedStatement,
       })),
     )
     .onConflictDoUpdate({
@@ -57,6 +58,7 @@ export async function upsertLedgerAccounts(
         statement: sql`excluded.statement`,
         mappingConfidence: sql`excluded.mapping_confidence`,
         needsReview: sql`excluded.needs_review`,
+        suggestedStatement: sql`excluded.suggested_statement`,
       },
     });
 

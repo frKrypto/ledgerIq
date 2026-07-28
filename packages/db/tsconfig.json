@@ -20,6 +20,12 @@
     },
     {
       "path": "../normalize"
+    },
+    {
+      "path": "../reconcile"
+    },
+    {
+      "path": "../seed"
     }
   ]
 }

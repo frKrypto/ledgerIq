@@ -312,6 +312,32 @@ export class QuickBooksAdapter implements ConnectorAdapter {
    * subtly incomplete data. Silent under-fetching yields confidently wrong
    * metrics with no error anywhere.
    */
+  /**
+   * Fetch one of QuickBooks' own reports.
+   *
+   * Distinct from entity sync on purpose: reports are QuickBooks' answer, not its
+   * data. We never store them as facts — they exist so we can check our answer
+   * against theirs. If those two ever disagree, the source system is right and we
+   * are wrong, and finding that out is worth an extra API call.
+   *
+   * Errors are NOT swallowed here, unlike `reconcile` below. A reconciliation run
+   * that silently returns nothing when the API has a bad minute would report
+   * agreement, which is the one wrong answer this whole path exists to prevent.
+   */
+  async fetchReport(
+    connection: ConnectionRef,
+    reportName: string,
+    params: Record<string, string> = {},
+  ): Promise<unknown> {
+    const credentials = await this.ensureFreshCredentials(connection);
+    const realmId = connection.externalAccountId ?? credentials.externalAccountId;
+    const query = new URLSearchParams({ minorversion: String(MINOR_VERSION), ...params });
+    const url = `${this.#apiBase}/${realmId}/reports/${reportName}?${query.toString()}`;
+
+    const response = await this.#http.request(url, { accessToken: credentials.accessToken });
+    return JSON.parse(response.body) as unknown;
+  }
+
   async reconcile(
     connection: ConnectionRef,
     recordType: string,

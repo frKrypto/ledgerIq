@@ -131,6 +131,23 @@ export async function startFakeQbo(options: FakeQboOptions = {}): Promise<FakeQb
       return;
     }
 
+    // ── Reports ──────────────────────────────────────────────────────────────
+    //
+    // The P&L is computed HERE, from the same entity payloads this server hands
+    // out — the way QuickBooks derives it from the ledger. That independence is
+    // the entire point: if it simply echoed a total it was handed, reconciling
+    // against it would prove nothing except that arithmetic is deterministic.
+    // Because it walks the raw Invoice/Purchase/Bill lines and groups by the
+    // chart of accounts, a normalization bug on our side shows up as a real
+    // disagreement.
+    if (url.pathname.includes('/reports/ProfitAndLoss')) {
+      const start = url.searchParams.get('start_date') ?? '1900-01-01';
+      const end = url.searchParams.get('end_date') ?? '2999-12-31';
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end(JSON.stringify(buildProfitAndLoss(data, start, end)));
+      return;
+    }
+
     if (url.pathname.endsWith('/query')) {
       const query = url.searchParams.get('query') ?? '';
       queryLog.push(query);
@@ -215,3 +232,139 @@ export function makeRecords(recordType: string, count: number): unknown[] {
 }
 
 export const FAKE_REALM_ID = REALM_ID;
+
+/**
+ * Derive a ProfitAndLoss report from raw entity payloads, in QuickBooks' own
+ * nested report shape.
+ *
+ * Two things are reproduced on purpose because they break naive parsers:
+ *
+ *   - **Sub-account nesting.** Payroll accounts are emitted as children of a
+ *     parent row that ALSO carries a Summary. A walker that sums every row it
+ *     meets double-counts them.
+ *   - **Positional ColData.** Values live at the end of an array, not under a
+ *     named key, and amounts are decimal strings.
+ */
+interface QboRef { value?: string; name?: string }
+interface QboLine {
+  Amount?: number;
+  SalesItemLineDetail?: { ItemAccountRef?: QboRef };
+  AccountBasedExpenseLineDetail?: { AccountRef?: QboRef };
+}
+interface QboDoc { TxnDate?: string; Line?: QboLine[] }
+
+export function buildProfitAndLoss(
+  data: Record<string, unknown[]>,
+  start: string,
+  end: string,
+): unknown {
+  type Acct = { Id: string; Name: string; AccountType: string };
+  const accounts = (data['Account'] ?? []) as Acct[];
+  const byId = new Map(accounts.map((a) => [a.Id, a]));
+  const byName = new Map(accounts.map((a) => [a.Name, a]));
+
+  const inRange = (d: string): boolean => d >= start && d <= end;
+  const totals = new Map<string, number>(); // account name -> minor units
+
+  const add = (name: string, minor: number): void =>
+    void totals.set(name, (totals.get(name) ?? 0) + minor);
+  const minor = (n: number): number => Math.round(n * 100);
+
+  // Income: invoice lines, by the income account each line points at. Accrual —
+  // dated on TxnDate, not when the invoice was paid.
+  for (const raw of (data['Invoice'] ?? []) as QboDoc[]) {
+    if (!inRange(String(raw.TxnDate))) continue;
+    for (const line of raw.Line ?? []) {
+      const ref = line.SalesItemLineDetail?.ItemAccountRef;
+      if (!ref) continue;
+      const acct = byId.get(String(ref.value)) ?? byName.get(String(ref.name));
+      if (acct) add(acct.Name, minor(Number(line.Amount ?? 0)));
+    }
+  }
+
+  // Costs: expense lines from Purchase and Bill alike. Both are accrual
+  // documents in QBO and both land on the P&L.
+  for (const key of ['Purchase', 'Bill']) {
+    for (const raw of (data[key] ?? []) as QboDoc[]) {
+      if (!inRange(String(raw.TxnDate))) continue;
+      for (const line of raw.Line ?? []) {
+        const ref = line.AccountBasedExpenseLineDetail?.AccountRef;
+        if (!ref) continue;
+        const acct = byId.get(String(ref.value)) ?? byName.get(String(ref.name));
+        if (acct) add(acct.Name, minor(Number(line.Amount ?? 0)));
+      }
+    }
+  }
+
+  const dollars = (m: number): string => (m / 100).toFixed(2);
+  const leaf = (name: string, m: number): unknown => ({
+    type: 'Data',
+    ColData: [{ value: name }, { value: dollars(m) }],
+  });
+
+  const forType = (type: string): Array<[string, number]> =>
+    [...totals.entries()]
+      .filter(([name]) => byName.get(name)?.AccountType === type)
+      .sort(([a], [b]) => a.localeCompare(b));
+
+  const income = forType('Income');
+  const cogs = forType('Cost of Goods Sold');
+  const expense = forType('Expense');
+
+  const sum = (rows: Array<[string, number]>): number => rows.reduce((s, [, m]) => s + m, 0);
+
+  // Payroll accounts nest under a parent that also carries a Summary. This is
+  // the sub-account shape that double-counts a naive parser.
+  const payrollNames = new Set(['Salaries & Wages', 'Payroll Taxes', 'Employee Benefits']);
+  const payroll = expense.filter(([n]) => payrollNames.has(n));
+  const flatExpense = expense.filter(([n]) => !payrollNames.has(n));
+
+  const expenseRows: unknown[] = flatExpense.map(([n, m]) => leaf(n, m));
+  if (payroll.length > 0) {
+    expenseRows.unshift({
+      type: 'Section',
+      Header: { ColData: [{ value: 'Payroll Expenses' }] },
+      Rows: { Row: payroll.map(([n, m]) => leaf(n, m)) },
+      Summary: { ColData: [{ value: 'Total Payroll Expenses' }, { value: dollars(sum(payroll)) }] },
+    });
+  }
+
+  const section = (group: string, label: string, rows: unknown[], total: number): unknown => ({
+    type: 'Section',
+    group,
+    Header: { ColData: [{ value: label }] },
+    Rows: { Row: rows },
+    Summary: { ColData: [{ value: `Total ${label}` }, { value: dollars(total) }] },
+  });
+
+  const incomeTotal = sum(income);
+  const cogsTotal = sum(cogs);
+  const expenseTotal = sum(expense);
+
+  return {
+    Header: { StartPeriod: start, EndPeriod: end, ReportName: 'ProfitAndLoss', Currency: 'USD' },
+    Columns: { Column: [{ ColTitle: '' }, { ColTitle: 'Total' }] },
+    Rows: {
+      Row: [
+        section('Income', 'Income', income.map(([n, m]) => leaf(n, m)), incomeTotal),
+        section('COGS', 'Cost of Goods Sold', cogs.map(([n, m]) => leaf(n, m)), cogsTotal),
+        {
+          type: 'Section',
+          group: 'GrossProfit',
+          Summary: { ColData: [{ value: 'Gross Profit' }, { value: dollars(incomeTotal - cogsTotal) }] },
+        },
+        section('Expenses', 'Expenses', expenseRows, expenseTotal),
+        {
+          type: 'Section',
+          group: 'NetIncome',
+          Summary: {
+            ColData: [
+              { value: 'Net Income' },
+              { value: dollars(incomeTotal - cogsTotal - expenseTotal) },
+            ],
+          },
+        },
+      ],
+    },
+  };
+}

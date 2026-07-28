@@ -11,6 +11,7 @@ import { connect } from './commands/connect.js';
 import { sync } from './commands/sync.js';
 import { status, inspect } from './commands/status.js';
 import { demo } from './commands/demo.js';
+import { reconcile } from './commands/reconcile.js';
 import { forecastRecord, forecastScore, forecastAccuracy, forecastBackfill } from './commands/forecast.js';
 
 const USAGE = `
@@ -42,6 +43,10 @@ ${fmt.bold('ledgeriq')} — operator CLI
 
       This is the nightly job. Forecast history cannot be rebuilt after the
       fact, so run it even before there is a scheduler.
+
+  ${fmt.cyan('reconcile')} --connection <id> [--start YYYY-MM-DD] [--end YYYY-MM-DD]
+      Compare our canonical model against QuickBooks' own P&L, per account.
+      Exits non-zero on any divergence. This is the Phase 1 gate.
 
 ${fmt.dim('Setup: docs/03-engineering/local-quickbooks.md')}
 `;
@@ -104,6 +109,18 @@ async function main(): Promise<void> {
       else throw new ConfigError(
         'forecast requires a subcommand: record, backfill, score, or accuracy',
       );
+      break;
+    }
+    case 'reconcile': {
+      const connection = flag(argv, 'connection');
+      if (!connection) throw new ConfigError('reconcile requires --connection <id>');
+      const start = flag(argv, 'start');
+      const end = flag(argv, 'end');
+      await reconcile({
+        connectionId: connection,
+        ...(start !== undefined ? { start } : {}),
+        ...(end !== undefined ? { end } : {}),
+      });
       break;
     }
     case 'status': {
