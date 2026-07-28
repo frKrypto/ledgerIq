@@ -65,7 +65,8 @@ These are the decisions the whole plan rests on. Each is argued in detail in the
 - **[Investor Pitch](docs/04-business/pitch-deck.md)** — slide-by-slide outline with speaker notes
 
 ### Execution
-- **[Development Roadmap](docs/05-execution/roadmap.md)** — 18 months, 4 phases, with kill criteria per phase
+- **[The plan from here](docs/05-execution/next-phases.md)** — five phases, re-planned against what actually got built. **Start here.**
+- **[Development Roadmap](docs/05-execution/roadmap.md)** — the original 18-month, 4-phase shape, written before any code existed
 - **[Sprint Plan](docs/05-execution/sprint-plan.md)** — sprints 1–12 in detail, with acceptance criteria
 - **[Risk Assessment](docs/05-execution/risks.md)** — ranked by expected loss, with mitigations and tripwires
 - **[Compliance Roadmap](docs/05-execution/compliance.md)** — SOC 2, GLBA, state privacy law, and what *not* to chase early

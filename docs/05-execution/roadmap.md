@@ -3,6 +3,10 @@
 18 months, four phases. **Every phase has a kill criterion** — a result that should stop us and force
 a rethink rather than a push onward. Phases without kill criteria are wishes.
 
+> **This document was written before any code existed.** For the near term, read
+> **[next-phases.md](next-phases.md)** instead — the same strategy re-planned against what actually
+> got built. It supersedes Phase 0 and Phase 1 below; the long-range shape here still stands.
+
 ---
 
 ## Phase 0 — Foundation (months 1–3)
