@@ -19,17 +19,50 @@ confidence-scored account mapping, a deterministic metric engine with provenance
 
 Not built, and load-bearing:
 
-| Gap | Why it matters |
-|---|---|
-| **No real books have ever gone through the pipeline** | Normalization has only seen data a generator built to be normalizable |
-| **`forecasts` is never written to** | The table exists in `0005_canonical.sql`. Bet #6 says the flywheel is the moat, and it cannot be reconstructed retroactively |
-| **Cash is a summed ledger, not a bank balance** | `cashPosition` sums transactions. In real books that is a reconciled figure, often weeks stale — and the wedge is cash-flow certainty |
-| **No auth, no deployment** | Nobody outside this machine can use it |
-| **No AI layer** | The namesake feature. Deliberately last — see Phase 4 |
-| **`S3Archive` and `AwsKms` throw** | Fine on local disk; not fine holding someone else's data |
+| Gap | Status | Why it matters |
+|---|---|---|
+| **No real books have ever gone through the pipeline** | **still open — the blocker** | Normalization has only seen data a generator built to be normalizable |
+| **`forecasts` is never written to** | **closed** | Persisted and scored; band calibration now derives from it |
+| **Cash is a summed ledger, not a bank balance** | still open, needs Plaid | `cashPosition` sums transactions. In real books that is a reconciled figure, often weeks stale — and the wedge is cash-flow certainty |
+| **No auth, no deployment** | still open | Nobody outside this machine can use it |
+| **No AI layer** | still open | The namesake feature. Deliberately last — see Phase 4 |
+| **`S3Archive` and `AwsKms` throw** | still open | Fine on local disk; not fine holding someone else's data |
 
 By roadmap.md's own Phase 0 exit criteria, one of four is met (the tenancy suite). The unmet one
 that matters is *"a real business's QuickBooks + bank data reconciles to source-system totals."*
+
+### Progress against this plan
+
+Phase 1 is built and Phase 2 is partly built. Everything below was verified against the
+synthetic business; none of it has met a real set of books, which is the point of the
+remaining blocker.
+
+| Item | State |
+|---|---|
+| Forecast persistence + scoring, with the deferral guard | done |
+| Backfill for a same-day accuracy baseline, kept separate from live scores | done |
+| **Band calibration from measured error** | done — 0% → 80% coverage |
+| Reconciliation harness + `ledgeriq reconcile` | done, exercised against a derived P&L |
+| Golden fixtures, exact equality | done |
+| Alert rules with the four noise gates | done |
+| Weekly brief generation | done |
+| Reconciliation sweep across orgs | not done |
+| Plaid, balance anchoring, cross-source transfer matching | **blocked** — nothing to match against without a second source |
+| Auth, deployment, delivery channels | **blocked** — needs a cloud account and providers |
+| AI CFO pipeline | not done |
+| Billing, price test, SOC 2 | **blocked** — needs real customers |
+
+Three things the work surfaced that changed the plan rather than just executing it:
+
+1. **The forecast band was decoration.** 0% coverage at every horizon — the P10–P90 range never
+   contained the actual. Fixed by measuring instead of assuming; see `packages/metrics/src/calibration.ts`.
+2. **The P50 has a real bias.** It under-predicts cash by ~$662K at 90 days on the demo business.
+   Deliberately *not* auto-corrected, because an automatic offset papers over the cause. This is a
+   live modelling task, not a closed one.
+3. **We were overruling the customer's own books.** A name heuristic silently reclassified an
+   account from Expense to COGS. Being right about the accounting does not make it right to apply
+   when the customer can pull their own P&L and see a different gross margin. Now stored as a
+   suggestion for onboarding to ask about.
 
 ---
 

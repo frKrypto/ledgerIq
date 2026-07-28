@@ -133,10 +133,16 @@ a snapshot, not a live app, and the page says so on its face.
 | **13-week cash forecast** — four streams, per-customer payment lag, named risks | `packages/metrics/src/forecast.ts` |
 | **Web dashboard** with drill-down to source transactions | `apps/web/` |
 | **Static export** — the whole dashboard frozen into one shareable file | `apps/web/src/export.ts` |
+| **Forecast accuracy flywheel** — persisted, scored, and read back | `packages/db/src/repositories/forecasts.ts` |
+| **Band calibration from measured error** — 0% → 80% coverage | `packages/metrics/src/calibration.ts` |
+| **Reconciliation harness** — canonical vs. the source system's own P&L, zero tolerance | `packages/reconcile/` |
+| **Golden fixtures** — every metric pinned to an exact value | `packages/db/test/golden-fixtures.test.ts` |
+| **Alert rules** — confidence, materiality, confirmation, and dedup gates | `packages/alerts/src/rules.ts` |
+| **Weekly brief** — built around the quiet week | `packages/alerts/src/brief.ts` |
 
 ```bash
 npm install && docker compose up -d postgres
-npm run db:migrate && npm test        # 102 tests
+npm run db:migrate && npm test        # 163 tests
 ```
 
 Once you have Intuit sandbox credentials (free, ~15 min), the full pipeline runs
@@ -157,6 +163,10 @@ Sprint 2 is tested against a **fake QuickBooks server** that reproduces the real
 `Retry-After`, and mid-stream token expiry. That server caught a real bug: QBO stamps every response
 with a timestamp, so hashing the whole payload made re-fetched pages look unique and silently
 defeated deduplication on the retry path.
+
+**Plan:** [next-phases.md](docs/05-execution/next-phases.md) — five phases, re-planned against
+what actually got built. Phase 1 is done; Phase 2 is partly done; the rest is gated on real
+QuickBooks and Plaid credentials, a deployment target, and design partners.
 
 **Next:** the AI layer (sprints 10–11) — the planner/executor/verifier/narrator pipeline that turns
 these computed figures into answers. The metric engine it narrates over now exists, which was the
