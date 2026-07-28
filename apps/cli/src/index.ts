@@ -10,9 +10,14 @@ import { ConfigError, fmt } from './context.js';
 import { connect } from './commands/connect.js';
 import { sync } from './commands/sync.js';
 import { status, inspect } from './commands/status.js';
+import { demo } from './commands/demo.js';
 
 const USAGE = `
 ${fmt.bold('ledgeriq')} — operator CLI
+
+  ${fmt.cyan('demo')} [--org <name>] [--months 24]
+      Build a complete demo business and run it through the real pipeline.
+      No Intuit credentials needed. Then: npm run web
 
   ${fmt.cyan('connect')} [--org <name>] [--port <n>]
       Run the QuickBooks OAuth flow and store credentials encrypted.
@@ -39,6 +44,15 @@ async function main(): Promise<void> {
   const [command, ...argv] = process.argv.slice(2);
 
   switch (command) {
+    case 'demo': {
+      const org = flag(argv, 'org');
+      const months = flag(argv, 'months');
+      await demo({
+        ...(org !== undefined ? { orgName: org } : {}),
+        ...(months !== undefined ? { months: Number(months) } : {}),
+      });
+      break;
+    }
     case 'connect': {
       const org = flag(argv, 'org');
       const port = flag(argv, 'port');

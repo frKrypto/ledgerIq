@@ -65,6 +65,11 @@ export default tseslint.config(
       'packages/db/src/cli/**',
       'packages/db/src/migrate.ts',
       'packages/db/test/**',
+      // Operator/demo surfaces that must resolve an org identity BEFORE a
+      // tenant scope can exist. Narrow by construction: these lookups return
+      // only an org id or name, never financial data.
+      'apps/cli/**',
+      'apps/web/src/server.ts',
     ],
     rules: {
       'no-restricted-syntax': [
@@ -91,7 +96,7 @@ export default tseslint.config(
 
   {
     // CLI entrypoints exist to print. Test files assert rather than return.
-    files: ['**/src/cli/**/*.ts', 'apps/cli/**/*.ts'],
+    files: ['**/src/cli/**/*.ts', 'apps/cli/**/*.ts', 'apps/web/**/*.ts'],
     rules: { 'no-console': 'off' },
   },
 

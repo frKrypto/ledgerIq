@@ -1,6 +1,8 @@
 import {
   bigserial,
   date,
+  numeric,
+  pgEnum,
   boolean,
   char,
   index,
@@ -257,6 +259,126 @@ export const tenantDataKeys = pgTable('tenant_data_keys', {
   retiredAt: timestamp('retired_at', { withTimezone: true }),
 });
 
+
+// ── canonical financial model (0005) ────────────────────────────────────────
+
+export const statementClass = pgEnum('statement_class', [
+  'revenue','cogs','opex','payroll','other_income','other_expense','asset','liability','equity',
+]);
+export const txnDirection = pgEnum('txn_direction', ['inflow', 'outflow']);
+export const categorySource = pgEnum('category_source', [
+  'user_rule','source_system','classifier','llm','default',
+]);
+export const accountTypeEnum = pgEnum('account_type', [
+  'checking','savings','credit_card','loan','line_of_credit','investment','payment_processor','other',
+]);
+export const docStatus = pgEnum('doc_status', [
+  'draft','open','partial','paid','overdue','void','written_off',
+]);
+
+export const categories = pgTable('categories', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  orgId: uuid('org_id'),
+  parentId: uuid('parent_id'),
+  key: text('key').notNull(),
+  name: text('name').notNull(),
+  statement: statementClass('statement').notNull(),
+  isDiscretionary: boolean('is_discretionary').notNull().default(false),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const ledgerAccounts = pgTable('ledger_accounts', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  orgId: uuid('org_id').notNull(),
+  source: sourceSystem('source').notNull(),
+  sourceAccountId: text('source_account_id').notNull(),
+  name: text('name').notNull(),
+  fullName: text('full_name'),
+  accountType: text('account_type'),
+  accountSubtype: text('account_subtype'),
+  statement: statementClass('statement'),
+  mappingConfidence: numeric('mapping_confidence'),
+  needsReview: boolean('needs_review').notNull().default(false),
+  isActive: boolean('is_active').notNull().default(true),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const customers = pgTable('customers', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  orgId: uuid('org_id').notNull(),
+  name: text('name').notNull(),
+  normalizedName: text('normalized_name').notNull(),
+  email: text('email'),
+  /** Fitted payment-lag distribution — the main forecast-accuracy input. */
+  paymentBehavior: jsonb('payment_behavior').notNull().default({}),
+  source: sourceSystem('source').notNull(),
+  sourceCustomerId: text('source_customer_id'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const transactions = pgTable('transactions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  orgId: uuid('org_id').notNull(),
+  accountId: uuid('account_id'),
+  ledgerAccountId: uuid('ledger_account_id'),
+  direction: txnDirection('direction').notNull(),
+  amount: numeric('amount').notNull(),
+  currency: char('currency', { length: 3 }).notNull().default('USD'),
+  /** Economic timing (accrual). */
+  occurredAt: date('occurred_at').notNull(),
+  /** Cash settlement. Null means no cash has moved yet. */
+  postedAt: date('posted_at'),
+  description: text('description'),
+  merchantName: text('merchant_name'),
+  categoryId: uuid('category_id'),
+  statement: statementClass('statement'),
+  categorySource: categorySource('category_source').notNull().default('default'),
+  categoryConfidence: numeric('category_confidence'),
+  customerId: uuid('customer_id'),
+  vendorId: uuid('vendor_id'),
+  isCanonical: boolean('is_canonical').notNull().default(true),
+  isTransfer: boolean('is_transfer').notNull().default(false),
+  source: sourceSystem('source').notNull(),
+  sourceTxnId: text('source_txn_id'),
+  sourceRecordType: text('source_record_type'),
+  transformVersion: text('transform_version').notNull(),
+  ingestedAt: timestamp('ingested_at', { withTimezone: true }).notNull().defaultNow(),
+  voidedAt: timestamp('voided_at', { withTimezone: true }),
+});
+
+export const invoices = pgTable('invoices', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  orgId: uuid('org_id').notNull(),
+  customerId: uuid('customer_id'),
+  number: text('number'),
+  status: docStatus('status').notNull().default('open'),
+  issuedOn: date('issued_on').notNull(),
+  dueDate: date('due_date'),
+  termsDays: integer('terms_days'),
+  total: numeric('total').notNull(),
+  amountPaid: numeric('amount_paid').notNull().default('0'),
+  paidOn: date('paid_on'),
+  expectedPaymentDate: date('expected_payment_date'),
+  source: sourceSystem('source').notNull(),
+  sourceInvoiceId: text('source_invoice_id'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  voidedAt: timestamp('voided_at', { withTimezone: true }),
+});
+
+export const forecasts = pgTable('forecasts', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  orgId: uuid('org_id').notNull(),
+  kind: text('kind').notNull().default('cash'),
+  horizonDays: integer('horizon_days').notNull().default(91),
+  generatedAt: timestamp('generated_at', { withTimezone: true }).notNull().defaultNow(),
+  points: jsonb('points').notNull(),
+  riskEvents: jsonb('risk_events').notNull().default([]),
+  assumptions: jsonb('assumptions').notNull().default([]),
+  methodVersion: text('method_version').notNull(),
+  confidence: text('confidence').notNull(),
+  historyDays: integer('history_days'),
+});
+
 /**
  * Tables carrying tenant data, each protected by an RLS policy in 0002_rls.sql.
  * The tenancy suite iterates this list, so a new tenant table added without a
@@ -274,6 +396,16 @@ export const TENANT_SCOPED_TABLES = [
   'raw_payloads',
   'sync_checkpoints',
   'tenant_data_keys',
+  'ledger_accounts',
+  'accounts',
+  'customers',
+  'vendors',
+  'transactions',
+  'invoices',
+  'payroll_runs',
+  'balances',
+  'metric_snapshots',
+  'forecasts',
 ] as const;
 
 /**
@@ -284,4 +416,5 @@ export const GLOBAL_TABLES: Record<string, string> = {
   users: 'A user may belong to several orgs; access is mediated by memberships.',
   firms: 'A firm spans many orgs; access is mediated by firm_clients.',
   schema_migrations: 'Migration bookkeeping, no tenant data.',
+  categories: 'Carries the shared system taxonomy (org_id IS NULL) alongside tenant rows; its RLS policy admits both.',
 };

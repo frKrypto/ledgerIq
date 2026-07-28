@@ -87,9 +87,23 @@ sourcing. Treat them as a model to argue with, not facts to cite.
 
 ## Status
 
-**Sprints 1–2 complete.** The tenancy spine and the QuickBooks ingestion pipeline are built and
-tested; there is no user-facing product yet and won't be until roughly sprint 7 — see
-[the sprint plan](docs/05-execution/sprint-plan.md).
+**There is a running product you can open.** Two commands, no credentials required:
+
+```bash
+docker compose up -d postgres && npm install
+npm run db:migrate
+npm run demo      # builds a 24-month agency and runs it through the real pipeline
+npm run web       # → http://localhost:4100
+```
+
+`demo` generates a realistic 22-person agency, serves it from a fake QuickBooks API, and pulls it
+through the **entire real ingestion path** — adapter, rate limiter, archive, checkpoints,
+normalization, canonical model. The only fake component is Intuit. Every figure the dashboard shows
+is computed by the metric engine from those rows; nothing is hardcoded. Click any figure to see the
+source transactions behind it.
+
+To point it at real books instead, see
+[local-quickbooks.md](docs/03-engineering/local-quickbooks.md).
 
 | Delivered | Where |
 |---|---|
@@ -106,7 +120,12 @@ tested; there is no user-facing product yet and won't be until roughly sprint 7 
 | **Resumable backfill — archive-then-checkpoint ordering** | `packages/connectors/src/sync/backfill.ts` |
 | Credential vault proving a database dump yields no usable tokens | `packages/db/src/repositories/credentials.ts` |
 | **Postgres-backed checkpoints** — resumption survives a process restart | `packages/db/src/repositories/sync-state.ts` |
-| **Operator CLI** — connect, sync, status, inspect | `apps/cli/` |
+| **Operator CLI** — demo, connect, sync, status, inspect | `apps/cli/` |
+| Synthetic business generator (deterministic, deliberately imperfect books) | `packages/seed/` |
+| QuickBooks → canonical normalization with confidence-scored account mapping | `packages/normalize/` |
+| **Metric engine** — provenance on every figure, `insufficient_data` over zero | `packages/metrics/src/engine.ts` |
+| **13-week cash forecast** — four streams, per-customer payment lag, named risks | `packages/metrics/src/forecast.ts` |
+| **Web dashboard** with drill-down to source transactions | `apps/web/` |
 
 ```bash
 npm install && docker compose up -d postgres
@@ -132,5 +151,6 @@ Sprint 2 is tested against a **fake QuickBooks server** that reproduces the real
 with a timestamp, so hashing the whole payload made re-fetched pages look unique and silently
 defeated deduplication on the retry path.
 
-**Next:** sprint 3 — normalization into the canonical model, and the chart-of-accounts mapping.
-Run a real sandbox backfill first; the `inspect --fields` output is the input to that design.
+**Next:** the AI layer (sprints 10–11) — the planner/executor/verifier/narrator pipeline that turns
+these computed figures into answers. The metric engine it narrates over now exists, which was the
+precondition.

@@ -3,11 +3,16 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "bin": { "ledgeriq": "./src/index.ts" },
+  "bin": {
+    "ledgeriq": "./src/index.ts"
+  },
   "dependencies": {
     "@ledgeriq/connectors": "*",
     "@ledgeriq/core": "*",
     "@ledgeriq/crypto": "*",
-    "@ledgeriq/db": "*"
+    "@ledgeriq/db": "*",
+    "@ledgeriq/seed": "*",
+    "@ledgeriq/normalize": "*",
+    "@ledgeriq/metrics": "*"
   }
 }
