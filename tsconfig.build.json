@@ -1,0 +1,32 @@
+{
+  "files": [],
+  "references": [
+    {
+      "path": "packages/core"
+    },
+    {
+      "path": "packages/crypto"
+    },
+    {
+      "path": "packages/connectors"
+    },
+    {
+      "path": "packages/seed"
+    },
+    {
+      "path": "packages/normalize"
+    },
+    {
+      "path": "packages/metrics"
+    },
+    {
+      "path": "packages/db"
+    },
+    {
+      "path": "apps/cli"
+    },
+    {
+      "path": "apps/web"
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "name": "@ledgeriq/db",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema": "./src/schema/index.ts"
+  },
+  "scripts": {
+    "bootstrap": "node --import tsx src/cli/bootstrap.ts",
+    "migrate": "node --import tsx src/cli/migrate.ts"
+  },
+  "dependencies": {
+    "@ledgeriq/core": "*",
+    "drizzle-orm": "^0.38.2",
+    "pg": "^8.13.1",
+    "@ledgeriq/crypto": "*",
+    "@ledgeriq/connectors": "*",
+    "@ledgeriq/normalize": "*"
+  }
+}

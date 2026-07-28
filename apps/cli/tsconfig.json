@@ -1,0 +1,33 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist"
+  },
+  "include": [
+    "src/**/*.ts"
+  ],
+  "references": [
+    {
+      "path": "../../packages/core"
+    },
+    {
+      "path": "../../packages/crypto"
+    },
+    {
+      "path": "../../packages/connectors"
+    },
+    {
+      "path": "../../packages/seed"
+    },
+    {
+      "path": "../../packages/normalize"
+    },
+    {
+      "path": "../../packages/metrics"
+    },
+    {
+      "path": "../../packages/db"
+    }
+  ]
+}
