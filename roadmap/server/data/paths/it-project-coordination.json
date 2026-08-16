@@ -1,0 +1,191 @@
+{
+  "id": "it-project-coordination",
+  "name": "IT Project Coordination",
+  "tagline": "Get paid for organization and follow-through rather than for code.",
+  "description": "Project coordinators keep technical projects moving: tracking tasks and deadlines, running status meetings, chasing blockers, maintaining documentation, and shielding the project manager from administrative drag. It is one of the few tech-adjacent roles where the core requirement is reliability and communication rather than technical depth — which makes it unusually reachable for someone with supervisory or shift-lead experience.",
+  "avgTimeline": "4–9 months to first role",
+  "difficulty": "gentle",
+  "salaryRange": {
+    "min": 50000,
+    "max": 70000,
+    "currency": "USD",
+    "note": "Project coordinator entry range. Project managers commonly earn $85K–120K, and coordinator-to-PM is a well-worn 2–4 year progression — this is a path with a clear ladder."
+  },
+  "remoteFriendly": {
+    "level": "high",
+    "note": "Coordination is meetings, documents, and tracking tools, so it remotes well. Entry-level coordinators are sometimes kept on-site for the first year because a lot of the job is informal hallway follow-up."
+  },
+  "realityCheck": "Coordinator roles vary from genuine junior project management to glorified meeting scheduling. Ask in the interview what you'd own. Also: 'PMP required' on a posting rules you out for now — the PMP needs documented project experience, so it's a year-three goal, not a starting credential.",
+  "whyItFits": "If you've ever run a shift, built a schedule, coordinated a truck unload, or been the person who made sure the handover actually happened, you have done coordination work. The domain changes; the skill doesn't. This path converts existing supervisory experience into tech salary faster than almost anything else here.",
+  "nextRoles": [
+    "IT Project Coordinator",
+    "Project Coordinator",
+    "Project Administrator",
+    "Scrum Master (Junior)",
+    "Program Coordinator",
+    "Associate Project Manager"
+  ],
+  "nextPaths": ["technical-business-analyst", "it-support", "data-analytics", "qa-testing"],
+  "motivation": {
+    "quote": "Every technical project fails for the same non-technical reasons: nobody wrote it down, nobody followed up, and nobody said the deadline had slipped until it was too late. Being the person who fixes that is a career.",
+    "story": "Shift supervisors and assistant managers move into project coordination more easily than they expect, because the interview questions are all about handling competing priorities, chasing people who owe you something, and communicating bad news early — all of which is retail management. The gap to close is tooling and vocabulary, and that takes months rather than years.",
+    "source": "Composite of the pattern described in r/projectmanagement career-change threads"
+  },
+  "interviewPrep": [
+    { "topic": "Prioritization", "question": "You have three deadlines the same week and can't hit all of them. What do you do?", "why": "They want early communication and explicit tradeoffs: assess impact, propose which slips and why, escalate with a recommendation rather than an apology after the fact." },
+    { "topic": "Chasing", "question": "A developer keeps missing status updates. How do you handle it?", "why": "Start by asking whether something is blocking them rather than assuming negligence, make the update path as low-friction as possible, and escalate only when the pattern continues. Never open with the manager." },
+    { "topic": "Fundamentals", "question": "What's the difference between a risk and an issue?", "why": "A risk might happen (you plan for it); an issue is happening (you manage it). Keeping the two in separate registers is basic project hygiene." },
+    { "topic": "Methodology", "question": "What's the difference between waterfall and agile, and when would you use each?", "why": "Waterfall: fixed scope, sequential phases, good for regulated or hardware-dependent work. Agile: iterative, adapting scope, good for software with evolving requirements. Say that most real organizations run a hybrid." },
+    { "topic": "Scope", "question": "A stakeholder asks for 'one small extra thing' mid-project. What happens?", "why": "Log it, assess impact on schedule and budget, run it through change control, get an explicit decision. This is the scope-creep question and they're checking you won't just say yes." },
+    { "topic": "Communication", "question": "How do you run a status meeting people don't dread?", "why": "Agenda sent in advance, timeboxed, focused on blockers rather than round-robin narration, decisions and actions with owners and dates captured and sent within the hour." },
+    { "topic": "Bad news", "question": "The project is going to be two weeks late. How and when do you communicate that?", "why": "Immediately, with the cause, options, and a recommendation. The wrong answer is waiting for certainty — late bad news is the cardinal sin of project work." }
+  ],
+  "steps": [
+    {
+      "id": "it-project-coordination-1",
+      "title": "Learn project management fundamentals",
+      "description": "Project lifecycle, scope, schedule and budget as competing constraints, risk registers, RACI matrices, status reporting, and change control. You need the vocabulary more than the theory — the concepts will feel familiar if you've run a team, but the words are what get you through screening.",
+      "type": "skill",
+      "estimatedTime": "4–6 weeks (~40 hours)",
+      "estimatedWeeks": 5,
+      "estimatedHours": 40,
+      "costEstimate": 0,
+      "costNote": "Free. PMI publishes substantial free material and there are complete free courses on YouTube.",
+      "noPcRequired": true,
+      "libraryFriendly": true,
+      "optional": false,
+      "outcome": "You can describe how a project is planned, tracked, and closed using standard terminology.",
+      "resumeBullet": null,
+      "resources": [
+        { "name": "Google Project Management Professional Certificate (Coursera)", "url": "https://www.coursera.org/professional-certificates/google-project-management", "cost": 49, "type": "course", "notes": "PAID: $49/month, roughly $150–200 total. The single most cost-effective credential on this path, and financial aid is routinely approved.", "lastVerified": "2026-08" },
+        { "name": "PMI — free resources and PMBOK overview", "url": "https://www.pmi.org/learning", "cost": 0, "type": "course", "notes": "Free articles, templates, and webinars.", "lastVerified": "2026-08" },
+        { "name": "Scrum Guide (free)", "url": "https://scrumguides.org/", "cost": 0, "type": "book", "notes": "Free and under 20 pages. Read it twice.", "lastVerified": "2026-08" }
+      ]
+    },
+    {
+      "id": "it-project-coordination-2",
+      "title": "Get fluent in Jira, Asana, and the tool stack",
+      "description": "Coordinators live in the tools: Jira or Azure DevOps for software work, Asana/Monday/Smartsheet in less technical organizations, Confluence or SharePoint for documentation, and Excel for everything else. Build a realistic project in a free tier — epics, tasks, dependencies, a timeline view, and a status dashboard.",
+      "type": "skill",
+      "estimatedTime": "3–4 weeks (~30 hours)",
+      "estimatedWeeks": 4,
+      "estimatedHours": 30,
+      "costEstimate": 0,
+      "costNote": "Free. Jira and Asana both have free tiers that cover everything you need to learn the tools.",
+      "noPcRequired": false,
+      "libraryFriendly": true,
+      "optional": false,
+      "outcome": "A fully-built sample project plan in Jira with dependencies and a timeline.",
+      "resumeBullet": "Managed project plans in Jira and Asana: work breakdown, dependency tracking, timeline/Gantt views, and status dashboards for stakeholder reporting.",
+      "portfolioItem": true,
+      "resources": [
+        { "name": "Jira free tier", "url": "https://www.atlassian.com/software/jira/free", "cost": 0, "type": "tool", "notes": "Free for up to 10 users, including timeline and roadmap views.", "lastVerified": "2026-08" },
+        { "name": "Atlassian University (free courses)", "url": "https://university.atlassian.com/", "cost": 0, "type": "course", "notes": "Free official Jira and Confluence training with completion badges.", "lastVerified": "2026-08" },
+        { "name": "Asana free tier and Asana Academy", "url": "https://academy.asana.com/", "cost": 0, "type": "course", "notes": "Free tier plus free training. Common in non-software organizations.", "lastVerified": "2026-08" }
+      ]
+    },
+    {
+      "id": "it-project-coordination-3",
+      "title": "Learn enough IT to coordinate technical work",
+      "description": "You don't need to build systems, but you must understand what your team is talking about: environments (dev/test/prod), deployments and releases, testing phases, servers versus applications, tickets versus stories, and why a 'simple change' sometimes isn't. Coordinators who can't follow the technical conversation get routed around.",
+      "type": "skill",
+      "estimatedTime": "4–6 weeks (~40 hours)",
+      "estimatedWeeks": 5,
+      "estimatedHours": 40,
+      "costEstimate": 0,
+      "costNote": "Free.",
+      "noPcRequired": true,
+      "libraryFriendly": true,
+      "optional": false,
+      "outcome": "You can sit in a technical standup and follow what's being said.",
+      "resumeBullet": "Working knowledge of software delivery lifecycle: environments, release management, testing phases, and defect triage.",
+      "resources": [
+        { "name": "Professor Messer — free A+ / Network+ videos (skim for vocabulary)", "url": "https://www.professormesser.com/", "cost": 0, "type": "course", "notes": "Free. You're watching for vocabulary here, not to pass the exam.", "lastVerified": "2026-08" },
+        { "name": "roadmap.sh (visual maps of technical roles)", "url": "https://roadmap.sh/", "cost": 0, "type": "course", "notes": "Free. Useful for understanding what the people you coordinate actually do all day.", "lastVerified": "2026-08" }
+      ]
+    },
+    {
+      "id": "it-project-coordination-4",
+      "title": "Run a real project and document it",
+      "description": "Volunteer to coordinate something real — a nonprofit's website rebuild, a community event, a system change at your current job. Produce the full artifact set: charter, plan, RACI, risk register, status reports, and a closeout summary with lessons learned. That artifact set is your portfolio, and it's what makes the difference against candidates who only have a certificate.",
+      "type": "project",
+      "estimatedTime": "8–12 weeks (~60 hours)",
+      "estimatedWeeks": 10,
+      "estimatedHours": 60,
+      "costEstimate": 0,
+      "costNote": "Free.",
+      "noPcRequired": false,
+      "libraryFriendly": true,
+      "optional": false,
+      "outcome": "A completed project with a full, professional document set.",
+      "resumeBullet": "Coordinated a multi-stakeholder project end to end: authored the project charter, plan, RACI matrix, and risk register; ran weekly status reporting; and delivered on schedule with a documented closeout.",
+      "portfolioItem": true,
+      "resources": [
+        { "name": "PMI free project templates", "url": "https://www.pmi.org/learning/library", "cost": 0, "type": "tool", "notes": "Free template and article library.", "lastVerified": "2026-08" },
+        { "name": "Catchafire (skills-based volunteering for nonprofits)", "url": "https://www.catchafire.org/", "cost": 0, "type": "community", "notes": "Free. Nonprofits post real projects needing coordination — legitimate resume experience with a reference attached.", "lastVerified": "2026-08" },
+        { "name": "VolunteerMatch", "url": "https://www.volunteermatch.org/", "cost": 0, "type": "community", "notes": "Free. Filter for project management and administrative opportunities, including remote ones.", "lastVerified": "2026-08" }
+      ]
+    },
+    {
+      "id": "it-project-coordination-5",
+      "title": "Earn CompTIA Project+ or a Scrum certification",
+      "description": "Project+ is the vendor-neutral entry project credential and, unlike the PMP, has no experience prerequisite. The cheaper alternative is a Scrum certification: the PSM I exam costs $200 with no mandatory training, while the CSM requires a $500–1,000 course. If money is tight, PSM I is the better value.",
+      "type": "certification",
+      "estimatedTime": "5–8 weeks (~50 hours)",
+      "estimatedWeeks": 6,
+      "estimatedHours": 50,
+      "costEstimate": 370,
+      "costNote": "PAID: CompTIA Project+ is about $370 (2026 pricing). Scrum.org's PSM I is $200 with no required course and is the cheapest respected option. Avoid the CSM unless an employer is paying for the mandatory class.",
+      "noPcRequired": true,
+      "libraryFriendly": true,
+      "optional": false,
+      "outcome": "Project+ or PSM I certified.",
+      "resumeBullet": "CompTIA Project+ certified (or Professional Scrum Master I) — project lifecycle, scope and change control, risk management, and agile delivery.",
+      "resources": [
+        { "name": "CompTIA Project+ (official)", "url": "https://www.comptia.org/en-us/certifications/project/", "cost": 370, "type": "cert", "notes": "PAID, roughly $370. No experience prerequisite, which is the main reason to choose it over the PMP or CAPM.", "lastVerified": "2026-08" },
+        { "name": "Scrum.org PSM I", "url": "https://www.scrum.org/assessments/professional-scrum-master-i-certification", "cost": 200, "type": "cert", "notes": "PAID, $200, no mandatory training. Free practice assessments on the same site. The best value credential on this path.", "lastVerified": "2026-08" },
+        { "name": "PMI CAPM (alternative)", "url": "https://www.pmi.org/certifications/certified-associate-capm", "cost": 300, "type": "cert", "notes": "PAID, about $225 for PMI members / $300 for non-members, plus 23 hours of required project management education. More recognized than Project+ in PMI-heavy industries.", "lastVerified": "2026-08" }
+      ]
+    },
+    {
+      "id": "it-project-coordination-6",
+      "title": "Rewrite your supervisory experience in project language",
+      "description": "Every scheduling, staffing, and rollout task you've handled is project work described in the wrong vocabulary. 'Coordinated seasonal hiring and training for 20 staff across a 6-week ramp' is a project. Systematically translate your history: deliverables, timelines, stakeholders, constraints, outcomes.",
+      "type": "experience",
+      "estimatedTime": "1–2 weeks (~10 hours)",
+      "estimatedWeeks": 2,
+      "estimatedHours": 10,
+      "costEstimate": 0,
+      "costNote": "Free.",
+      "noPcRequired": true,
+      "libraryFriendly": true,
+      "optional": false,
+      "outcome": "A resume where your operations history reads as project experience.",
+      "resumeBullet": "Coordinated cross-functional operational initiatives including staffing ramps, process rollouts, and vendor deliveries — managing schedules, dependencies, and stakeholder communication.",
+      "resources": [
+        { "name": "r/projectmanagement career change threads", "url": "https://www.reddit.com/r/projectmanagement/", "cost": 0, "type": "community", "notes": "Free. Many posts specifically about translating non-PM experience.", "lastVerified": "2026-08" }
+      ]
+    },
+    {
+      "id": "it-project-coordination-7",
+      "title": "Apply to coordinator roles across industries",
+      "description": "Don't limit yourself to software companies — hospitals, universities, construction firms, insurers, and government agencies all run IT projects and hire coordinators, often with less competition and more willingness to train. Contract and temp-to-hire roles through staffing agencies are also common and are a legitimate way in.",
+      "type": "experience",
+      "estimatedTime": "6–12 weeks of active searching",
+      "estimatedWeeks": 9,
+      "estimatedHours": 40,
+      "costEstimate": 0,
+      "costNote": "Free.",
+      "noPcRequired": true,
+      "libraryFriendly": true,
+      "optional": false,
+      "outcome": "A first coordinator role.",
+      "resumeBullet": null,
+      "resources": [
+        { "name": "Indeed — project coordinator listings", "url": "https://www.indeed.com/q-project-coordinator-jobs.html", "cost": 0, "type": "tool", "notes": "Free. Also search 'project administrator', 'PMO analyst', and 'program coordinator'.", "lastVerified": "2026-08" },
+        { "name": "Local PMI chapter events", "url": "https://www.pmi.org/chapters", "cost": 0, "type": "community", "notes": "Chapter meetings are often free or low-cost for non-members and are attended by people who hire coordinators.", "lastVerified": "2026-08" },
+        { "name": "USAJOBS (government IT project roles)", "url": "https://www.usajobs.gov/", "cost": 0, "type": "tool", "notes": "Free. Government hiring weighs documented experience over degrees more heavily than the private sector, though the process is slow.", "lastVerified": "2026-08" }
+      ]
+    }
+  ]
+}

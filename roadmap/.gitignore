@@ -1,0 +1,10 @@
+node_modules/
+dist/
+
+# Local database — the app recreates it and reseeds the two accounts on boot.
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+
+.env
+.env.local

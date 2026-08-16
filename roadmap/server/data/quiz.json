@@ -1,0 +1,105 @@
+{
+  "intro": "Eight questions, about three minutes. This suggests a starting point — it is not a verdict, and switching later costs you much less than you'd think (see the pivot map).",
+  "questions": [
+    {
+      "id": "q1",
+      "prompt": "Which of these sounds most like a good day at work?",
+      "type": "single",
+      "options": [
+        { "id": "a", "label": "Fixing things people are frustrated about, one after another", "weights": { "it-support": 3, "qa-testing": 1, "networking": 1 } },
+        { "id": "b", "label": "Building something from nothing and seeing it work", "weights": { "software-engineering": 3, "ux-ui-design": 2, "cloud-devops": 1 } },
+        { "id": "c", "label": "Digging into numbers until the answer falls out", "weights": { "data-analytics": 3, "database-admin": 2, "technical-business-analyst": 1 } },
+        { "id": "d", "label": "Making sure a messy operation runs on time", "weights": { "it-project-coordination": 3, "technical-business-analyst": 2 } }
+      ]
+    },
+    {
+      "id": "q2",
+      "prompt": "Be honest about detail. Which is more you?",
+      "type": "single",
+      "options": [
+        { "id": "a", "label": "I notice the one thing that's wrong in a room of things that are fine", "weights": { "qa-testing": 3, "cybersecurity": 2, "database-admin": 1 } },
+        { "id": "b", "label": "I see the big picture and who needs to talk to whom", "weights": { "it-project-coordination": 3, "technical-business-analyst": 2 } },
+        { "id": "c", "label": "I want to understand how the machine actually works underneath", "weights": { "networking": 3, "cloud-devops": 2, "software-engineering": 1 } },
+        { "id": "d", "label": "I notice when something is confusing or badly laid out", "weights": { "ux-ui-design": 3, "technical-business-analyst": 1 } }
+      ]
+    },
+    {
+      "id": "q3",
+      "prompt": "How much do you want to write code?",
+      "type": "single",
+      "options": [
+        { "id": "a", "label": "A lot — that's the point", "weights": { "software-engineering": 3, "cloud-devops": 1 } },
+        { "id": "b", "label": "Some, if it automates boring work", "weights": { "cloud-devops": 3, "qa-testing": 2, "data-analytics": 2 } },
+        { "id": "c", "label": "A little — queries and scripts are fine", "weights": { "data-analytics": 2, "database-admin": 2, "technical-business-analyst": 1 } },
+        { "id": "d", "label": "Ideally none", "weights": { "it-support": 3, "it-project-coordination": 3, "ux-ui-design": 2 } }
+      ]
+    },
+    {
+      "id": "q4",
+      "prompt": "How soon do you need to be earning from this?",
+      "type": "single",
+      "options": [
+        { "id": "a", "label": "As fast as possible — under 6 months", "weights": { "it-support": 3, "qa-testing": 3, "it-project-coordination": 2 } },
+        { "id": "b", "label": "Within about a year", "weights": { "data-analytics": 2, "technical-business-analyst": 2, "it-support": 1, "qa-testing": 1 } },
+        { "id": "c", "label": "I can take 1–2 years if the ceiling is higher", "weights": { "software-engineering": 3, "cybersecurity": 2, "cloud-devops": 2, "ux-ui-design": 2, "database-admin": 2 } }
+      ]
+    },
+    {
+      "id": "q5",
+      "prompt": "Do you have regular access to a computer you can install things on?",
+      "type": "single",
+      "options": [
+        { "id": "a", "label": "No — phone only right now", "weights": { "it-support": 2, "technical-business-analyst": 2, "it-project-coordination": 2, "data-analytics": 1 }, "flags": { "noPc": true } },
+        { "id": "b", "label": "Sometimes — library or a shared computer", "weights": { "it-support": 1, "data-analytics": 1, "technical-business-analyst": 1 }, "flags": { "sharedPc": true } },
+        { "id": "c", "label": "Yes, my own machine", "weights": {} }
+      ]
+    },
+    {
+      "id": "q6",
+      "prompt": "What's your realistic study budget over the next year?",
+      "type": "single",
+      "options": [
+        { "id": "a", "label": "Essentially $0 — free only", "weights": { "software-engineering": 2, "ux-ui-design": 2, "qa-testing": 2, "data-analytics": 1 }, "flags": { "freeOnly": true } },
+        { "id": "b", "label": "A few hundred dollars if it's clearly worth it", "weights": { "it-support": 2, "cloud-devops": 2, "it-project-coordination": 1 } },
+        { "id": "c", "label": "$1,000+ across the year", "weights": { "cybersecurity": 2, "networking": 2, "database-admin": 1 } }
+      ]
+    },
+    {
+      "id": "q7",
+      "prompt": "How do you feel about being on the phone or in meetings with people?",
+      "type": "single",
+      "options": [
+        { "id": "a", "label": "Fine — I'm good with people, that's my strength", "weights": { "it-support": 2, "it-project-coordination": 3, "technical-business-analyst": 3, "ux-ui-design": 1 } },
+        { "id": "b", "label": "I can do it, but I'd rather focus on the work", "weights": { "data-analytics": 2, "qa-testing": 2, "networking": 1 } },
+        { "id": "c", "label": "I'd like as little of it as possible", "weights": { "software-engineering": 2, "database-admin": 2, "cloud-devops": 2, "cybersecurity": 1 } }
+      ]
+    },
+    {
+      "id": "q8",
+      "prompt": "Which of these have you already done, even outside tech? (Pick all that apply.)",
+      "type": "multi",
+      "options": [
+        { "id": "a", "label": "Trained or supervised other people", "weights": { "it-project-coordination": 2, "technical-business-analyst": 2, "it-support": 1 } },
+        { "id": "b", "label": "Built spreadsheets people actually relied on", "weights": { "data-analytics": 3, "technical-business-analyst": 2, "database-admin": 1 } },
+        { "id": "c", "label": "Fixed computers, phones, or networks for friends and family", "weights": { "it-support": 3, "networking": 2 } },
+        { "id": "d", "label": "Made something visual — flyers, layouts, photo editing", "weights": { "ux-ui-design": 3 } },
+        { "id": "e", "label": "Written any code at all, even a little", "weights": { "software-engineering": 3, "qa-testing": 1, "cloud-devops": 1 } },
+        { "id": "f", "label": "Caught mistakes others missed — counts, orders, paperwork", "weights": { "qa-testing": 3, "cybersecurity": 2, "database-admin": 1 } }
+      ]
+    }
+  ],
+  "flagEffects": {
+    "noPc": {
+      "note": "You marked phone-only access. Paths whose early steps need your own machine are ranked lower here, and the Library view lists every step you can start without one.",
+      "penalties": { "software-engineering": -3, "cloud-devops": -3, "database-admin": -3, "networking": -2, "ux-ui-design": -2, "cybersecurity": -1 }
+    },
+    "sharedPc": {
+      "note": "Library or shared computer access works for a surprising amount of this — especially browser-based learning.",
+      "penalties": { "cloud-devops": -1, "database-admin": -1, "software-engineering": -1 }
+    },
+    "freeOnly": {
+      "note": "You marked a $0 budget. Paths with mandatory paid certifications are ranked lower — but note that CompTIA vouchers can often be funded through workforce grants, and Coursera financial aid is routinely approved.",
+      "penalties": { "cybersecurity": -3, "networking": -3, "it-support": -2, "database-admin": -2, "it-project-coordination": -2 }
+    }
+  }
+}

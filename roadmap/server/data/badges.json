@@ -1,0 +1,135 @@
+[
+  {
+    "id": "first-step",
+    "name": "Off the Starting Line",
+    "description": "Completed your first step.",
+    "icon": "🌱",
+    "rule": { "type": "stepsCompleted", "count": 1 }
+  },
+  {
+    "id": "five-steps",
+    "name": "Building Momentum",
+    "description": "Completed five steps.",
+    "icon": "🔥",
+    "rule": { "type": "stepsCompleted", "count": 5 }
+  },
+  {
+    "id": "fifteen-steps",
+    "name": "Serious About This",
+    "description": "Completed fifteen steps.",
+    "icon": "🏗️",
+    "rule": { "type": "stepsCompleted", "count": 15 }
+  },
+  {
+    "id": "first-skill",
+    "name": "New Skill Unlocked",
+    "description": "Completed your first skill step.",
+    "icon": "🧠",
+    "rule": { "type": "stepTypeCompleted", "stepType": "skill", "count": 1 }
+  },
+  {
+    "id": "first-cert",
+    "name": "Certified",
+    "description": "Earned your first certification.",
+    "icon": "📜",
+    "rule": { "type": "stepTypeCompleted", "stepType": "certification", "count": 1 }
+  },
+  {
+    "id": "three-certs",
+    "name": "Stacked",
+    "description": "Earned three certifications.",
+    "icon": "🎖️",
+    "rule": { "type": "stepTypeCompleted", "stepType": "certification", "count": 3 }
+  },
+  {
+    "id": "first-project",
+    "name": "Something to Show",
+    "description": "Finished your first hands-on project.",
+    "icon": "🔨",
+    "rule": { "type": "stepTypeCompleted", "stepType": "project", "count": 1 }
+  },
+  {
+    "id": "three-projects",
+    "name": "Portfolio Builder",
+    "description": "Finished three hands-on projects.",
+    "icon": "🗂️",
+    "rule": { "type": "stepTypeCompleted", "stepType": "project", "count": 3 }
+  },
+  {
+    "id": "quarter-path",
+    "name": "Quarter Way",
+    "description": "Reached 25% on any path.",
+    "icon": "🧭",
+    "rule": { "type": "pathPercent", "percent": 25 }
+  },
+  {
+    "id": "half-path",
+    "name": "Halfway There",
+    "description": "Reached 50% on any path.",
+    "icon": "⛰️",
+    "rule": { "type": "pathPercent", "percent": 50 }
+  },
+  {
+    "id": "path-complete",
+    "name": "Path Finished",
+    "description": "Completed every required step on a path.",
+    "icon": "🏁",
+    "rule": { "type": "pathPercent", "percent": 100 }
+  },
+  {
+    "id": "hours-10",
+    "name": "Ten Hours In",
+    "description": "Logged 10 hours of study time.",
+    "icon": "⏱️",
+    "rule": { "type": "hoursLogged", "hours": 10 }
+  },
+  {
+    "id": "hours-50",
+    "name": "Fifty Hours In",
+    "description": "Logged 50 hours of study time.",
+    "icon": "⏳",
+    "rule": { "type": "hoursLogged", "hours": 50 }
+  },
+  {
+    "id": "hours-100",
+    "name": "Hundred Hours In",
+    "description": "Logged 100 hours of study time. This is where it starts compounding.",
+    "icon": "💯",
+    "rule": { "type": "hoursLogged", "hours": 100 }
+  },
+  {
+    "id": "note-taker",
+    "name": "Note Taker",
+    "description": "Wrote notes on five different steps.",
+    "icon": "📝",
+    "rule": { "type": "notesWritten", "count": 5 }
+  },
+  {
+    "id": "explorer",
+    "name": "Explorer",
+    "description": "Started steps on three different paths.",
+    "icon": "🗺️",
+    "rule": { "type": "pathsTouched", "count": 3 }
+  },
+  {
+    "id": "no-pc-hero",
+    "name": "No PC, No Excuse",
+    "description": "Completed five steps that needed no computer of your own.",
+    "icon": "📱",
+    "rule": { "type": "noPcStepsCompleted", "count": 5 }
+  },
+  {
+    "id": "thrifty",
+    "name": "Free Route",
+    "description": "Completed ten steps that cost nothing.",
+    "icon": "🪙",
+    "rule": { "type": "freeStepsCompleted", "count": 10 }
+  },
+  {
+    "id": "job-ready",
+    "name": "Job Ready",
+    "description": "Completed every experience step on a path — including the applying part.",
+    "icon": "🚀",
+    "rule": { "type": "allStepsOfTypeInPath", "stepType": "experience" }
+  }
+]

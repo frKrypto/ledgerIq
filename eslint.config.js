@@ -16,6 +16,9 @@ export default tseslint.config(
       '**/.next/**',
       'docs/**',
       'infra/**',
+      // Self-contained app with its own toolchain and dependency tree; it is
+      // outside the npm workspaces and is checked by its own scripts.
+      'roadmap/**',
       'eslint.config.js',
     ],
   },

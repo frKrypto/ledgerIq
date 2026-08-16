@@ -1,0 +1,212 @@
+{
+  "id": "qa-testing",
+  "name": "QA / Software Testing",
+  "tagline": "The most underrated entry point into software work.",
+  "description": "QA is the least-hyped and most reachable way into a software organization. Manual testing roles genuinely hire people without degrees or prior tech experience, because the core skill is systematic curiosity — trying the thing nobody thought to try and writing down exactly what happened. From there, automation skills raise your pay substantially and put you a short step from software engineering.",
+  "avgTimeline": "4–9 months to first role",
+  "difficulty": "gentle",
+  "salaryRange": {
+    "min": 48000,
+    "max": 70000,
+    "currency": "USD",
+    "note": "Manual QA analyst entry range. Automation-capable QA engineers commonly earn $75K–110K, which is why the automation step below is the one that changes your financial trajectory."
+  },
+  "remoteFriendly": {
+    "level": "high",
+    "note": "QA is highly remote-friendly — the work is a laptop, a test environment, and a ticket tracker. Some hardware, medical device, and game testing roles require being on-site with physical devices."
+  },
+  "realityCheck": "Manual-only QA is under pressure from automation and offshoring, and the ceiling is real. Treat manual testing as the entry door, not the destination — start learning automation within your first six months on the job, or you'll plateau.",
+  "whyItFits": "If you're the person who notices the mislabeled item, the process that skips a step, or the sign that contradicts the other sign, that is the entire skill. QA rewards people who are meticulous and slightly stubborn about details.",
+  "nextRoles": [
+    "QA Analyst",
+    "QA Tester (Manual)",
+    "Software Test Engineer",
+    "Quality Assurance Specialist",
+    "QA Automation Engineer (after automation skills)",
+    "Game Tester (a distinct, lower-paid subfield)"
+  ],
+  "nextPaths": ["software-engineering", "technical-business-analyst", "it-project-coordination", "data-analytics"],
+  "motivation": {
+    "quote": "Anyone can say 'it's broken.' A tester says exactly what they did, what they expected, what happened instead, and how to make it happen again. That's the whole job, and it's teachable.",
+    "story": "QA is full of people who came from customer service, retail, and administrative work, because the trait that matters — refusing to let a vague bug report stand — isn't taught in a CS program. A common trajectory: manual QA at $50K, learn Playwright over the next year on the job, move to automation engineer at $85K, and then either stay in quality or cross into development.",
+    "source": "Composite of the pattern described in r/QualityAssurance career threads and Ministry of Testing community discussions"
+  },
+  "interviewPrep": [
+    { "topic": "Bug reporting", "question": "Write me a bug report for a login button that doesn't work.", "why": "The core skill test. Include: title, environment (browser/OS/version), steps to reproduce numbered, expected result, actual result, severity, and evidence (screenshot/console log)." },
+    { "topic": "Test design", "question": "How would you test a login page?", "why": "The most-asked QA interview question. Cover valid login, invalid password, empty fields, SQL injection strings, very long inputs, special characters, password reset, session timeout, lockout after failed attempts, mobile layout, accessibility, and back-button behavior after logout. Breadth of thinking is what they're scoring." },
+    { "topic": "Prioritization", "question": "What's the difference between severity and priority?", "why": "Severity is technical impact; priority is business urgency. A typo on the homepage is low severity but can be high priority — have an example ready." },
+    { "topic": "Process", "question": "What's a test plan and what's in it?", "why": "Scope, approach, environments, entry/exit criteria, risks, what's explicitly not being tested. That last item shows maturity." },
+    { "topic": "Automation", "question": "What should be automated and what shouldn't?", "why": "Automate stable, repetitive, high-value regression paths. Don't automate exploratory testing, one-off checks, or a UI that's still changing weekly." },
+    { "topic": "Judgment", "question": "You found a bug an hour before release. What do you do?", "why": "Assess impact and workaround availability, communicate immediately with evidence, and give the release decision to the people who own it — with a clear recommendation, not just an alarm." },
+    { "topic": "API testing", "question": "How would you test an API without a user interface?", "why": "Postman or curl, check status codes, response schema, error handling, boundary values, authorization on protected endpoints." }
+  ],
+  "steps": [
+    {
+      "id": "qa-testing-1",
+      "title": "Learn testing fundamentals and vocabulary",
+      "description": "Test cases, test plans, regression testing, smoke testing, black box vs white box, the software development lifecycle, and where QA fits in an agile team. This is mostly reading and video, and all of it works from a phone.",
+      "type": "skill",
+      "estimatedTime": "3–4 weeks (~25 hours)",
+      "estimatedWeeks": 4,
+      "estimatedHours": 25,
+      "costEstimate": 0,
+      "costNote": "Free. The best QA learning communities publish extensive free material.",
+      "noPcRequired": true,
+      "libraryFriendly": true,
+      "optional": false,
+      "outcome": "You can talk about testing using the words the industry uses.",
+      "resumeBullet": null,
+      "resources": [
+        { "name": "Ministry of Testing (free articles and community)", "url": "https://www.ministryoftesting.com/", "cost": 0, "type": "community", "notes": "Free content plus a paid membership option. The central community of the testing profession.", "lastVerified": "2026-08" },
+        { "name": "Test Automation University (Applitools) — free courses", "url": "https://testautomationu.applitools.com/", "cost": 0, "type": "course", "notes": "Completely free, taught by well-known practitioners. Covers manual fundamentals through advanced automation.", "lastVerified": "2026-08" },
+        { "name": "ISTQB Foundation Level syllabus (free PDF)", "url": "https://www.istqb.org/certifications/certified-tester-foundation-level", "cost": 0, "type": "book", "notes": "The syllabus itself is a free download and is a solid free curriculum even if you never take the exam.", "lastVerified": "2026-08" }
+      ]
+    },
+    {
+      "id": "qa-testing-2",
+      "title": "Practice writing bug reports and test cases",
+      "description": "Take real applications — the ones on your phone, open-source projects, deliberately buggy practice sites — and test them properly. Write 30–50 test cases and file every bug you find in a real format. This artifact is what you show in interviews, and almost no other entry-level applicant brings one.",
+      "type": "project",
+      "estimatedTime": "4–6 weeks (~40 hours)",
+      "estimatedWeeks": 5,
+      "estimatedHours": 40,
+      "costEstimate": 0,
+      "costNote": "Free. Jira and TestRail both have free tiers or trials; a well-organized spreadsheet is genuinely acceptable at this stage.",
+      "noPcRequired": true,
+      "libraryFriendly": true,
+      "optional": false,
+      "outcome": "A portfolio of real test cases and bug reports with your name on them.",
+      "resumeBullet": "Authored 50+ structured test cases and detailed defect reports covering functional, boundary, negative, and cross-browser scenarios.",
+      "portfolioItem": true,
+      "resources": [
+        { "name": "The Internet (Heroku) — deliberately buggy practice site", "url": "https://the-internet.herokuapp.com/", "cost": 0, "type": "practice", "notes": "Free. Built specifically for practicing test scenarios and automation.", "lastVerified": "2026-08" },
+        { "name": "Jira free tier", "url": "https://www.atlassian.com/software/jira/free", "cost": 0, "type": "tool", "notes": "Free for up to 10 users. The defect tracker most job postings name.", "lastVerified": "2026-08" },
+        { "name": "Sauce Demo (practice e-commerce app)", "url": "https://www.saucedemo.com/", "cost": 0, "type": "practice", "notes": "Free practice application with intentionally broken user accounts to find.", "lastVerified": "2026-08" }
+      ]
+    },
+    {
+      "id": "qa-testing-3",
+      "title": "Learn API testing with Postman",
+      "description": "A large share of modern testing happens below the user interface. Learn HTTP methods, status codes, request and response structure, JSON, and how to test endpoints directly with Postman. This is the skill that separates a QA candidate from someone who has just clicked around a website.",
+      "type": "skill",
+      "estimatedTime": "3–4 weeks (~25 hours)",
+      "estimatedWeeks": 4,
+      "estimatedHours": 25,
+      "costEstimate": 0,
+      "costNote": "Free. Postman's free tier covers everything here, and Postman's own learning center is free.",
+      "noPcRequired": false,
+      "libraryFriendly": true,
+      "optional": false,
+      "outcome": "You can test a REST API and explain what a 401 versus a 403 means.",
+      "resumeBullet": "Performed REST API testing with Postman: request construction, authentication, response validation, status code and schema verification, and collection-based regression suites.",
+      "resources": [
+        { "name": "Postman (free tier) and Postman Learning Center", "url": "https://learning.postman.com/", "cost": 0, "type": "tool", "notes": "Free. The learning center is genuinely good and costs nothing.", "lastVerified": "2026-08" },
+        { "name": "Public APIs list (free practice targets)", "url": "https://github.com/public-apis/public-apis", "cost": 0, "type": "practice", "notes": "Free. Hundreds of free public APIs to practice against.", "lastVerified": "2026-08" }
+      ]
+    },
+    {
+      "id": "qa-testing-4",
+      "title": "Learn enough SQL to verify data",
+      "description": "Testers are constantly asked whether the data landed correctly. SELECT, JOIN, WHERE, and GROUP BY are enough — you don't need the depth an analyst needs. This shows up as a bullet on most QA job postings and takes a couple of weeks.",
+      "type": "skill",
+      "estimatedTime": "2–3 weeks (~20 hours)",
+      "estimatedWeeks": 3,
+      "estimatedHours": 20,
+      "costEstimate": 0,
+      "costNote": "Free.",
+      "noPcRequired": true,
+      "libraryFriendly": true,
+      "optional": false,
+      "outcome": "You can verify in the database that the application did what it claimed.",
+      "resumeBullet": "Used SQL to validate application data integrity during functional and regression testing.",
+      "resources": [
+        { "name": "SQLBolt", "url": "https://sqlbolt.com/", "cost": 0, "type": "course", "notes": "Free, browser-based, finishable in a weekend at QA depth.", "lastVerified": "2026-08" }
+      ]
+    },
+    {
+      "id": "qa-testing-5",
+      "title": "Learn test automation (Playwright or Selenium)",
+      "description": "This is the step that changes your salary. Learn one programming language well enough to write tests — JavaScript/TypeScript with Playwright is the current best default, Python with Selenium or Java with Selenium are the legacy-heavy alternatives. Build an automated regression suite against a practice site and put it on GitHub.",
+      "type": "skill",
+      "estimatedTime": "10–14 weeks (~120 hours)",
+      "estimatedWeeks": 12,
+      "estimatedHours": 120,
+      "costEstimate": 0,
+      "costNote": "Free. Playwright, Selenium, and GitHub Actions for running the suite are all free and open source.",
+      "noPcRequired": false,
+      "libraryFriendly": false,
+      "optional": false,
+      "outcome": "An automated test suite you wrote, running in CI, in a public repository.",
+      "resumeBullet": "Built an automated end-to-end regression suite with Playwright (TypeScript), including page object structure, data-driven tests, and CI execution via GitHub Actions.",
+      "portfolioItem": true,
+      "resources": [
+        { "name": "Playwright official documentation", "url": "https://playwright.dev/docs/intro", "cost": 0, "type": "course", "notes": "Free. Excellent docs, and Playwright's own test generator makes the first week much easier.", "lastVerified": "2026-08" },
+        { "name": "Test Automation University — Playwright and Selenium courses", "url": "https://testautomationu.applitools.com/", "cost": 0, "type": "course", "notes": "Free full courses with certificates of completion.", "lastVerified": "2026-08" },
+        { "name": "Selenium official documentation", "url": "https://www.selenium.dev/documentation/", "cost": 0, "type": "course", "notes": "Free. Still the most-named tool in job postings, especially in Java shops.", "lastVerified": "2026-08" },
+        { "name": "freeCodeCamp JavaScript curriculum", "url": "https://www.freecodecamp.org/", "cost": 0, "type": "course", "notes": "Free. You need enough JavaScript to write tests — this covers it.", "lastVerified": "2026-08" }
+      ]
+    },
+    {
+      "id": "qa-testing-6",
+      "title": "ISTQB Foundation Level certification",
+      "description": "The recognized QA certification. Its value varies by market — some employers and staffing agencies list it as required, others don't care at all. Check listings in your area before spending. The free syllabus is worth reading regardless of whether you take the exam.",
+      "type": "certification",
+      "estimatedTime": "3–5 weeks (~30 hours)",
+      "estimatedWeeks": 4,
+      "estimatedHours": 30,
+      "costEstimate": 250,
+      "costNote": "PAID: roughly $200–300 in the US depending on the exam provider. Optional — check whether local job postings actually ask for it first.",
+      "noPcRequired": true,
+      "libraryFriendly": true,
+      "optional": true,
+      "outcome": "ISTQB Certified Tester, Foundation Level.",
+      "resumeBullet": "ISTQB Certified Tester – Foundation Level.",
+      "resources": [
+        { "name": "ISTQB Foundation Level (official)", "url": "https://www.istqb.org/certifications/certified-tester-foundation-level", "cost": 250, "type": "cert", "notes": "PAID. Price varies by national board; the syllabus and sample exams are free downloads.", "lastVerified": "2026-08" }
+      ]
+    },
+    {
+      "id": "qa-testing-7",
+      "title": "Find real testing work — including crowdtesting",
+      "description": "Crowdtesting platforms pay (modestly) for real testing work and give you legitimate experience to cite. Open-source projects also welcome testers and bug reports. Both give you something better than a certificate: evidence that someone accepted your bug reports.",
+      "type": "experience",
+      "estimatedTime": "6–10 weeks alongside other steps (~30 hours)",
+      "estimatedWeeks": 8,
+      "estimatedHours": 30,
+      "costEstimate": 0,
+      "costNote": "Free — and it pays a little. Do not pay any platform for the privilege of testing; legitimate crowdtesting always pays you.",
+      "noPcRequired": false,
+      "libraryFriendly": false,
+      "optional": false,
+      "outcome": "Paid or accepted testing work outside your own practice projects.",
+      "resumeBullet": "Performed functional and exploratory testing on live commercial applications through crowdtesting platforms, submitting reproducible defect reports accepted by client QA teams.",
+      "portfolioItem": true,
+      "resources": [
+        { "name": "uTest / Applause", "url": "https://www.utest.com/", "cost": 0, "type": "tool", "notes": "Free to join, pays per accepted bug and per test cycle. Modest money, real experience, real references.", "lastVerified": "2026-08" },
+        { "name": "Test IO", "url": "https://test.io/", "cost": 0, "type": "tool", "notes": "Free to join; another established crowdtesting platform.", "lastVerified": "2026-08" },
+        { "name": "Open-source projects' issue trackers", "url": "https://github.com/explore", "cost": 0, "type": "community", "notes": "Free. A well-written bug report on a popular project is a public work sample.", "lastVerified": "2026-08" }
+      ]
+    },
+    {
+      "id": "qa-testing-8",
+      "title": "Apply to QA roles — including through staffing agencies",
+      "description": "QA is one of the areas where contract-to-hire through a staffing agency genuinely works: agencies place entry-level testers constantly, the bar is lower, and a six-month contract converts into a permanent role or into a much stronger resume. Apply directly too, but don't skip the agencies here.",
+      "type": "experience",
+      "estimatedTime": "6–12 weeks of active searching",
+      "estimatedWeeks": 9,
+      "estimatedHours": 40,
+      "costEstimate": 0,
+      "costNote": "Free. Staffing agencies are paid by the employer — never pay an agency yourself.",
+      "noPcRequired": true,
+      "libraryFriendly": true,
+      "optional": false,
+      "outcome": "A first QA role.",
+      "resumeBullet": null,
+      "resources": [
+        { "name": "Indeed — QA tester listings", "url": "https://www.indeed.com/q-qa-tester-jobs.html", "cost": 0, "type": "tool", "notes": "Free. Also search 'quality assurance analyst', 'software tester', and 'test engineer'.", "lastVerified": "2026-08" },
+        { "name": "r/QualityAssurance", "url": "https://www.reddit.com/r/QualityAssurance/", "cost": 0, "type": "community", "notes": "Free. Frank discussion of the manual-versus-automation career question.", "lastVerified": "2026-08" },
+        { "name": "Tech staffing agencies (Robert Half, TEKsystems, Insight Global)", "url": "https://www.roberthalf.com/us/en/technology", "cost": 0, "type": "tool", "notes": "Free to candidates. Contract QA roles are one of the most reliable no-degree entry points in software.", "lastVerified": "2026-08" }
+      ]
+    }
+  ]
+}
